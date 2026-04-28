@@ -100,7 +100,8 @@
     });
 
     /* ── Admin mode ── */
-    const isAdminRoute = new URLSearchParams(location.search).has('admin');
+    const isAdminRoute = location.pathname === '/admin' ||
+                         new URLSearchParams(location.search).has('admin');
     if (!isAdminRoute) return;
 
     const storedKey = sessionStorage.getItem('dc-admin-key');
