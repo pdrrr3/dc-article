@@ -208,7 +208,7 @@ body {
   height: auto;
 }
 
-.diagram-mobile { display: none; }
+.diagram .diagram-mobile { display: none; }
 
 /* ── Terminal ── */
 
@@ -247,8 +247,8 @@ body {
     gap: 16px;
   }
 
-  .diagram-desktop { display: none; }
-  .diagram-mobile  { display: block; }
+  .diagram .diagram-desktop { display: none; }
+  .diagram .diagram-mobile  { display: block; }
 
   .image-pair__grid {
     grid-template-columns: 1fr;
