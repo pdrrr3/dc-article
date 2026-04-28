@@ -1,0 +1,259 @@
+@font-face {
+  font-family: 'Linux Libertine O';
+  src: url('LinLibertine_R.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Linux Libertine O';
+  src: url('LinLibertine_DR.otf') format('opentype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Linux Libertine Mono O';
+  src: url('LinLibertine_M.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --text-col: 500px;
+  --wide-col: 900px;
+  --gutter: clamp(1.25rem, 5vw, 3rem);
+  --gap-content: 60px;
+  --gap-section: 120px;
+  --ink: #000;
+  --bg: #fff;
+}
+
+html {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+body {
+  font-family: 'Linux Libertine O', Georgia, serif;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.7;
+  letter-spacing: 0.54px;
+  background: var(--bg);
+  position: relative;
+}
+
+/* ── Screen overlay (mix-blend-mode: screen over dark navy → blue tint on images) ── */
+
+.screen-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: #08243f;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  z-index: 999;
+}
+
+/* ── Page layout ── */
+
+.post {
+  max-width: var(--wide-col);
+  margin: 0 auto;
+  padding: 140px var(--gutter) var(--gap-section);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-section);
+}
+
+/* ── Title ── */
+
+.post-header {
+  width: var(--text-col);
+  max-width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.post-title {
+  font-family: 'Linux Libertine Mono O', 'Fragment Mono', monospace;
+  font-size: 24px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 9.6px;
+  text-transform: uppercase;
+  line-height: normal;
+  display: flex;
+  gap: 28px;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+/* ── Main content block ── */
+
+.post-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-content);
+}
+
+/* ── Hero ── */
+
+.hero-image {
+  width: var(--text-col);
+  max-width: 100%;
+}
+
+.hero-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* ── Body text ── */
+
+.post-body {
+  width: var(--text-col);
+  max-width: 100%;
+}
+
+.post-body p {
+  margin-bottom: 12px;
+}
+
+.post-body p:last-child {
+  margin-bottom: 0;
+}
+
+.post-body em {
+  font-style: italic;
+}
+
+.post-body a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.post-body a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.post-body--closing {
+  width: var(--text-col);
+  max-width: 100%;
+}
+
+/* ── Image pair ── */
+
+.image-pair {
+  width: 100%;
+}
+
+.image-pair__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+}
+
+.image-pair__item {
+  display: block;
+}
+
+.image-pair__item img {
+  display: block;
+  width: 100%;
+  height: 238px;
+  object-fit: cover;
+}
+
+.image-pair__item figcaption {
+  font-family: 'Linux Libertine Mono O', 'Fragment Mono', monospace;
+  font-size: 11px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 1.1px;
+  line-height: 1.6;
+  margin-top: 8px;
+  color: var(--ink);
+}
+
+/* ── Diagram ── */
+
+.diagram {
+  width: var(--text-col);
+  max-width: 100%;
+}
+
+.diagram img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* ── Terminal ── */
+
+.terminal-block {
+  width: var(--wide-col);
+  max-width: 100%;
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid #545454;
+}
+
+.terminal-block img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 960px) {
+  :root {
+    --wide-col: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --text-col: 100%;
+    --gap-content: 40px;
+    --gap-section: 64px;
+  }
+
+  .post-title {
+    font-size: 18px;
+    letter-spacing: 5px;
+    gap: 16px;
+  }
+
+  .image-pair__grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .image-pair__item img {
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
+
+  body {
+    font-size: 16px;
+  }
+}
