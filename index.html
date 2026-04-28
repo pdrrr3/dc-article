@@ -104,48 +104,9 @@
                          new URLSearchParams(location.search).has('admin');
     if (!isAdminRoute) return;
 
-    const storedKey = sessionStorage.getItem('dc-admin-key');
-    if (storedKey) {
-      enableAdmin(storedKey);
-    } else {
-      showLogin();
-    }
+    enableAdmin();
 
-    function showLogin() {
-      const overlay = document.createElement('div');
-      overlay.className = 'cms-login';
-      overlay.innerHTML = `
-        <div class="cms-login__box">
-          <p class="cms-login__label">Password</p>
-          <input class="cms-login__input" type="password" autofocus />
-          <p class="cms-login__error" hidden>Incorrect password</p>
-        </div>`;
-      document.body.appendChild(overlay);
-
-      const input = overlay.querySelector('input');
-      const error = overlay.querySelector('.cms-login__error');
-
-      input.addEventListener('keydown', async e => {
-        if (e.key !== 'Enter') return;
-        const res = await fetch('/api/auth', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password: input.value }),
-        });
-        if (res.ok) {
-          const { key } = await res.json();
-          sessionStorage.setItem('dc-admin-key', key);
-          overlay.remove();
-          enableAdmin(key);
-        } else {
-          error.hidden = false;
-          input.value = '';
-          input.focus();
-        }
-      });
-    }
-
-    function enableAdmin(key) {
+    function enableAdmin() {
       /* toolbar */
       const bar = document.createElement('div');
       bar.className = 'cms-bar';
@@ -188,7 +149,7 @@
 
         const res = await fetch('/api/save', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-admin-key': key },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(content),
         });
 
