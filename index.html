@@ -17,8 +17,8 @@
 
     <header class="post-header">
       <h1 class="post-title">
-        <span>Drone</span>
-        <span>Circle</span>
+        <span data-content="title_word_1">Drone</span>
+        <span data-content="title_word_2">Circle</span>
       </h1>
     </header>
 
@@ -29,26 +29,26 @@
       </figure>
 
       <div class="post-body">
-        <p>The slowness exists between what you can imagine and what you can make. The idea of reducing this distance may seem especially topical at the moment, but it has long been the core pursuit of creative technology.</p>
-        <p>1950s Cologne, Karlheinz Stockhausen drew shapes on paper to score <em>Studie II</em>. one of the earliest pieces of electronic music. Drawing rectangles for notation and triangles for amplitude, these sketches predate both the MIDI roll and the Envelope.</p>
-        <p>1960s England, Daphne Oram invented <em>Oramics</em>, a machine that reads ink sketches on film strips to describe specific sound parameters: pitch, timbre, volume, vibrato, duration. The photocells then read the drawings and outputs the sound in real time.</p>
+        <p data-content="body_1">The slowness exists between what you can imagine and what you can make. The idea of reducing this distance may seem especially topical at the moment, but it has long been the core pursuit of creative technology.</p>
+        <p data-content="body_2">1950s Cologne, Karlheinz Stockhausen drew shapes on paper to score <em>Studie II</em>. one of the earliest pieces of electronic music. Drawing rectangles for notation and triangles for amplitude, these sketches predate both the MIDI roll and the Envelope.</p>
+        <p data-content="body_3">1960s England, Daphne Oram invented <em>Oramics</em>, a machine that reads ink sketches on film strips to describe specific sound parameters: pitch, timbre, volume, vibrato, duration. The photocells then read the drawings and outputs the sound in real time.</p>
       </div>
 
       <figure class="image-pair">
         <div class="image-pair__grid">
           <figure class="image-pair__item">
             <img src="images/2.svg" alt="Studie II score" />
-            <figcaption>Studie II Score</figcaption>
+            <figcaption data-content="caption_1">Studie II Score</figcaption>
           </figure>
           <figure class="image-pair__item">
             <img src="images/3.jpg" alt="Oramics film strip" />
-            <figcaption>Oramics film strip</figcaption>
+            <figcaption data-content="caption_2">Oramics film strip</figcaption>
           </figure>
         </div>
       </figure>
 
       <div class="post-body">
-        <p>In a typical modular synth session, knobs, sliders, cables, buttons all need to be physically operated. Of course, this labour is preceded by some kind of intention. This intention can be specific or vague, with high or low predictability in mind. The unclear intentions and incorrect assumptions leave room for happy accidents—some of the best moments.</p>
+        <p data-content="body_4">In a typical modular synth session, knobs, sliders, cables, buttons all need to be physically operated. Of course, this labour is preceded by some kind of intention. This intention can be specific or vague, with high or low predictability in mind. The unclear intentions and incorrect assumptions leave room for happy accidents—some of the best moments.</p>
       </div>
 
       <figure class="diagram">
@@ -56,8 +56,8 @@
       </figure>
 
       <div class="post-body">
-        <p>At 56, our commercial work begins with setting predictable goals and clarifying intentions. However, due to the nature of business, the creative process is often shrouded in chaos. Lately we've been building agentic workflows to make this chaos more accessible. With this framing, while playing around with modular synths, we wondered what it would be like if we replaced the physical labour with natural language.</p>
-        <p><em>Drone Circle </em>is a lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
+        <p data-content="body_5">At 56, our commercial work begins with setting predictable goals and clarifying intentions. However, due to the nature of business, the creative process is often shrouded in chaos. Lately we've been building agentic workflows to make this chaos more accessible. With this framing, while playing around with modular synths, we wondered what it would be like if we replaced the physical labour with natural language.</p>
+        <p data-content="body_6"><em>Drone Circle </em>is a lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
       </div>
 
     </div>
@@ -67,11 +67,146 @@
     </figure>
 
     <div class="post-body post-body--closing">
-      <p>To learn more about <em>Drone Circle</em> or to try it out in person, we are hosting private demos at our office in Liberty Village this spring and summer.</p>
-      <p>Email us to arrange a studio visit: <a href="mailto:hello@56.digital">hello@56.digital</a></p>
+      <p data-content="closing_1">To learn more about <em>Drone Circle</em> or to try it out in person, we are hosting private demos at our office in Liberty Village this spring and summer.</p>
+      <p data-content="closing_2">Email us to arrange a studio visit: <a href="mailto:hello@56.digital">hello@56.digital</a></p>
     </div>
 
   </article>
+
+  <script>
+  (() => {
+    /* ── Content hydration ── */
+    fetch('/content.json')
+      .then(r => r.json())
+      .then(data => {
+        document.querySelectorAll('[data-content]').forEach(el => {
+          const key = el.dataset.content;
+          if (key === 'title_word_1') {
+            if (data.title) el.textContent = data.title.split(' ')[0] || el.textContent;
+          } else if (key === 'title_word_2') {
+            if (data.title) el.textContent = data.title.split(' ').slice(1).join(' ') || el.textContent;
+          } else if (data[key] !== undefined) {
+            el.innerHTML = data[key];
+          }
+        });
+      })
+      .catch(() => {}); // silently fall back to embedded content
+
+    /* ── Shift+A shortcut ── */
+    document.addEventListener('keydown', e => {
+      if (e.shiftKey && e.key === 'A' && !document.querySelector('.cms-bar')) {
+        window.location.href = '/admin';
+      }
+    });
+
+    /* ── Admin mode ── */
+    const isAdminRoute = new URLSearchParams(location.search).has('admin');
+    if (!isAdminRoute) return;
+
+    const storedKey = sessionStorage.getItem('dc-admin-key');
+    if (storedKey) {
+      enableAdmin(storedKey);
+    } else {
+      showLogin();
+    }
+
+    function showLogin() {
+      const overlay = document.createElement('div');
+      overlay.className = 'cms-login';
+      overlay.innerHTML = `
+        <div class="cms-login__box">
+          <p class="cms-login__label">Password</p>
+          <input class="cms-login__input" type="password" autofocus />
+          <p class="cms-login__error" hidden>Incorrect password</p>
+        </div>`;
+      document.body.appendChild(overlay);
+
+      const input = overlay.querySelector('input');
+      const error = overlay.querySelector('.cms-login__error');
+
+      input.addEventListener('keydown', async e => {
+        if (e.key !== 'Enter') return;
+        const res = await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: input.value }),
+        });
+        if (res.ok) {
+          const { key } = await res.json();
+          sessionStorage.setItem('dc-admin-key', key);
+          overlay.remove();
+          enableAdmin(key);
+        } else {
+          error.hidden = false;
+          input.value = '';
+          input.focus();
+        }
+      });
+    }
+
+    function enableAdmin(key) {
+      /* toolbar */
+      const bar = document.createElement('div');
+      bar.className = 'cms-bar';
+      bar.innerHTML = `
+        <span class="cms-bar__label">Editing</span>
+        <span class="cms-bar__status" aria-live="polite"></span>
+        <button class="cms-bar__btn cms-bar__btn--save">Save &amp; Publish</button>
+        <button class="cms-bar__btn cms-bar__btn--exit">Exit</button>`;
+      document.body.prepend(bar);
+
+      const status = bar.querySelector('.cms-bar__status');
+      const saveBtn = bar.querySelector('.cms-bar__btn--save');
+      const exitBtn = bar.querySelector('.cms-bar__btn--exit');
+
+      /* make content editable */
+      document.querySelectorAll('[data-content]').forEach(el => {
+        el.contentEditable = 'true';
+        el.classList.add('cms-editable');
+      });
+
+      /* save */
+      saveBtn.addEventListener('click', async () => {
+        saveBtn.disabled = true;
+        status.textContent = 'Saving…';
+
+        const content = {};
+        document.querySelectorAll('[data-content]').forEach(el => {
+          const key = el.dataset.content;
+          if (key === 'title_word_1' || key === 'title_word_2') {
+            const w1 = document.querySelector('[data-content="title_word_1"]').textContent.trim();
+            const w2 = document.querySelector('[data-content="title_word_2"]').textContent.trim();
+            content.title = `${w1} ${w2}`;
+          } else {
+            content[key] = el.innerHTML
+              .replace(/ contenteditable="true"/g, '')
+              .replace(/ class="cms-editable"/g, '')
+              .trim();
+          }
+        });
+
+        const res = await fetch('/api/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-key': key },
+          body: JSON.stringify(content),
+        });
+
+        if (res.ok) {
+          status.textContent = 'Saved — live in ~30s';
+        } else {
+          status.textContent = 'Save failed';
+        }
+        saveBtn.disabled = false;
+      });
+
+      /* exit */
+      exitBtn.addEventListener('click', () => {
+        sessionStorage.removeItem('dc-admin-key');
+        window.location.href = '/';
+      });
+    }
+  })();
+  </script>
 
 </body>
 </html>

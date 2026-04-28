@@ -180,6 +180,7 @@ body {
   width: 100%;
   height: 238px;
   object-fit: cover;
+  outline: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .image-pair__item figcaption {
@@ -256,4 +257,122 @@ body {
   body {
     font-size: 16px;
   }
+}
+
+/* ── CMS admin bar ── */
+
+.cms-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0 1.25rem;
+  height: 44px;
+  background: #fff;
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+  font-family: 'Linux Libertine Mono O', 'Fragment Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+}
+
+.cms-bar__label {
+  color: #2a2a2a;
+  font-weight: 400;
+}
+
+.cms-bar__status {
+  flex: 1;
+  color: #7a7a72;
+}
+
+.cms-bar__btn {
+  padding: 0.3rem 0.75rem;
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  border: 1px solid rgba(0,0,0,0.15);
+  border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+  color: #2a2a2a;
+  transition: background 0.1s;
+}
+
+.cms-bar__btn:hover { background: rgba(0,0,0,0.04); }
+.cms-bar__btn:disabled { opacity: 0.5; cursor: default; }
+
+.cms-bar__btn--save {
+  background: #2a2a2a;
+  color: #fff;
+  border-color: #2a2a2a;
+}
+
+.cms-bar__btn--save:hover { background: #444; }
+
+/* push content down when bar is visible */
+body:has(.cms-bar) .post { padding-top: calc(140px + 44px); }
+
+/* editable element highlight */
+.cms-editable {
+  outline: none;
+  border-radius: 2px;
+  transition: background 0.1s;
+}
+
+.cms-editable:hover,
+.cms-editable:focus {
+  background: rgba(0, 156, 10, 0.06);
+  outline: 1px dashed rgba(0, 156, 10, 0.35);
+  outline-offset: 2px;
+}
+
+/* ── CMS login overlay ── */
+
+.cms-login {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(250,249,247,0.92);
+  backdrop-filter: blur(4px);
+}
+
+.cms-login__box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 260px;
+}
+
+.cms-login__label {
+  font-family: 'Linux Libertine Mono O', 'Fragment Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: #6a6a62;
+}
+
+.cms-login__input {
+  font-family: 'Linux Libertine Mono O', 'Fragment Mono', monospace;
+  font-size: 14px;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid rgba(0,0,0,0.18);
+  border-radius: 2px;
+  background: #fff;
+  color: #2a2a2a;
+  outline: none;
+}
+
+.cms-login__input:focus { border-color: rgba(0,0,0,0.4); }
+
+.cms-login__error {
+  font-family: 'Linux Libertine Mono O', 'Fragment Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: #c0392b;
 }
