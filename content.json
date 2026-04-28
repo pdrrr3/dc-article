@@ -1,5 +1,6 @@
 {
   "title": "Drone Circle",
+  "intro": "<p>There is a slowness to patching modular synthesizers.</p>\n<p>I have a cable in hand and a signal path in mind. I plug the cable into the desired output. I listen carefully as each new connection changes the sound.</p>\n<p>There is a process of creating music through a series of small decisions: turning knobs, adjusting sliders, plugging cables, and pressing buttons. I have come to love this slowness.</p>",
   "body_1": "The slowness exists between what you can imagine and what you can make. The idea of reducing this distance may seem especially topical at the moment, but it has long been the core pursuit of creative technology.",
   "body_2": "1950s Cologne, Karlheinz Stockhausen drew shapes on paper to score <em>Studie II</em>. one of the earliest pieces of electronic music. Drawing rectangles for notation and triangles for amplitude, these sketches predate both the MIDI roll and the Envelope.",
   "body_3": "1960s England, Daphne Oram invented <em>Oramics</em>, a machine that reads ink sketches on film strips to describe specific sound parameters: pitch, timbre, volume, vibrato, duration. The photocells then read the drawings and outputs the sound in real time.",
