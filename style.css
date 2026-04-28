@@ -201,11 +201,14 @@ body {
   max-width: 100%;
 }
 
-.diagram img {
+.diagram img,
+.diagram svg {
   display: block;
   width: 100%;
   height: auto;
 }
+
+.diagram-mobile { display: none; }
 
 /* ── Terminal ── */
 
@@ -243,6 +246,9 @@ body {
     letter-spacing: 5px;
     gap: 16px;
   }
+
+  .diagram-desktop { display: none; }
+  .diagram-mobile  { display: block; }
 
   .image-pair__grid {
     grid-template-columns: 1fr;
