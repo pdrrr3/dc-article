@@ -35,7 +35,7 @@
   <rect x="320" y="0" width="580" height="500" fill="url(#dotGrid)"/>
 
   <!-- Header bar -->
-  <rect x="320" y="0" width="580" height="30" fill="#f0ede7"/>
+  <rect x="320" y="0" width="580" height="30" fill="#faf9f7"/>
   <circle cx="335" cy="15" r="5" fill="#a8a49c"/>
   <text x="348" y="20" font-family="'Courier New', Courier, monospace" font-size="10" fill="#403c38">Layer-385e2dc7</text>
   <text x="460" y="20" font-family="'Courier New', Courier, monospace" font-size="10" fill="#807c74">8d57884f</text>
