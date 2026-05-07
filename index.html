@@ -43,11 +43,11 @@
       <figure class="image-pair">
         <div class="image-pair__grid">
           <figure class="image-pair__item">
-            <img src="images/2.svg" alt="Studie II score" />
+            <img src="images/2.svg" alt="Studie II score" loading="lazy" />
             <figcaption data-content="caption_1">Studie II Score</figcaption>
           </figure>
           <figure class="image-pair__item">
-            <img src="images/3.jpg" alt="Oramics film strip" />
+            <img src="images/3.jpg" alt="Oramics film strip" loading="lazy" />
             <figcaption data-content="caption_2">Oramics film strip</figcaption>
           </figure>
         </div>
@@ -86,10 +86,10 @@
 
     <figure class="terminal-block">
       <div class="terminal-block__left">
-        <img src="images/terminal-left.svg" alt="" />
+        <img src="images/terminal-left.svg" alt="" loading="lazy" />
       </div>
       <div class="terminal-block__right">
-        <img src="images/terminal-right.svg" alt="Drone Circle interface: terminal chat with modular synth patch editor" />
+        <img src="images/terminal-right.svg" alt="Drone Circle interface: terminal chat with modular synth patch editor" loading="lazy" />
       </div>
     </figure>
 
@@ -118,6 +118,18 @@
         });
       })
       .catch(() => {}); // silently fall back to embedded content
+
+    /* ── Terminal demo height sync ── */
+    (() => {
+      const left  = document.querySelector('.terminal-block__left');
+      const right = document.querySelector('.terminal-block__right');
+      if (!left || !right) return;
+      function sync() { right.style.maxHeight = left.offsetHeight + 'px'; }
+      const img = left.querySelector('img');
+      if (img && !img.complete) img.addEventListener('load', sync);
+      else sync();
+      window.addEventListener('resize', sync);
+    })();
 
     /* ── Shift+A shortcut ── */
     document.addEventListener('keydown', e => {
