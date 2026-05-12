@@ -1,0 +1,160 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: 'LinLibertine';
+  src: url('/fonts/LinLibertine_M.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'FragmentMono';
+  src: url('/fonts/FragmentMono-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  /* Light JRPG terminal palette */
+  --color-bg-primary: #fafaf6;
+  --color-bg-secondary: #ffffff;
+  --color-bg-tertiary: #f3f3ee;
+  --color-bg-layer: #f7f6f0;
+  --color-border: rgba(0,0,0,0.12);
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #666666;
+  --color-text-muted: #999999;
+  --color-label: #0f7a32;
+  --color-accent: #0d8a3d;
+  --color-danger: #c4322f;
+  --color-warning: #8a9b4a;
+  --color-success: #2a8a3d;
+  --color-black: #1a1a1a;
+
+  --font-mono: 'FragmentMono', monospace;
+  --font-heading: 'LinLibertine', monospace;
+}
+
+/* Scope drone resets to the embedded engine root so the surrounding article
+ * (post-content, fonts, scrolling) is untouched. */
+.dc-engine, .dc-engine *, .dc-engine *::before, .dc-engine *::after {
+  box-sizing: border-box;
+  border-radius: 0 !important;
+  font-family: var(--font-mono);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.dc-engine {
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-size: 16px;
+}
+
+/* scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--color-bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--color-border); }
+
+/* range inputs */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 2px;
+  background: var(--color-border);
+  outline: none;
+  cursor: pointer;
+  border: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 8px;
+  height: 8px;
+  background: var(--color-label);
+  cursor: pointer;
+  border: none;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 8px;
+  height: 8px;
+  background: var(--color-label);
+  cursor: pointer;
+  border: none;
+}
+
+/* text input */
+input[type="text"] {
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: 16px;
+  padding: 3px 6px;
+  outline: none;
+}
+input[type="text"]:focus {
+  border-color: var(--color-label);
+}
+
+/* layer dotted background */
+.bg-dotted {
+  background-image: radial-gradient(circle, rgba(0,0,0,0.10) 1px, transparent 1px);
+  background-size: 6px 6px;
+}
+
+/* instrument cards span full width in masonry layout */
+.column-span-all {
+  column-span: all;
+  margin-top: 24px;
+}
+
+/* section title — USB8 heading font, uppercase with underline */
+.section-title {
+  color: var(--color-text-primary);
+  font-family: var(--font-heading);
+  font-weight: 400;
+  font-size: 16px;
+  text-transform: none;
+  letter-spacing: 0.08em;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 4px;
+}
+
+/* label text */
+.data-label {
+  color: var(--color-label);
+}
+
+/* value text — plain white */
+.data-value {
+  color: var(--color-text-primary);
+}
+
+/* selected item highlight */
+.sel-highlight {
+  background: var(--color-accent);
+  color: #ffffff;
+}
+
+/* layer meter dot — brighten ring on hover */
+.meter-dot .meter-dot-ring {
+  transition: stroke 0.15s ease;
+}
+.meter-dot:hover .meter-dot-ring {
+  stroke: rgba(0,0,0,0.45);
+}
+
+/* sequencer playhead highlight */
+.seq-playing {
+  outline: 2px solid var(--color-accent) !important;
+  outline-offset: -2px !important;
+}
+
+/* topnav busy spinner */
+@keyframes drone-spin {
+  to { transform: rotate(360deg); }
+}

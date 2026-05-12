@@ -1,0 +1,416 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 720" width="580" height="720">
+  <defs>
+    <pattern id="dotGrid" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="0.8" fill="#c8c4bc"/>
+    </pattern>
+  </defs>
+  <g transform="translate(-320, 0)">
+    <!-- ===================== RIGHT PANEL (320–900) ===================== -->
+  <!-- Dotted background -->
+  <rect x="320" y="0" width="580" height="720" fill="url(#dotGrid)"/>
+
+  <!-- Header bar -->
+  <rect x="320" y="0" width="580" height="30" fill="#faf9f7"/>
+  <circle cx="335" cy="15" r="5" fill="#a8a49c"/>
+  <text x="348" y="20" font-family="'Courier New', Courier, monospace" font-size="10" fill="#403c38">Layer-385e2dc7</text>
+  <text x="460" y="20" font-family="'Courier New', Courier, monospace" font-size="10" fill="#807c74">8d57884f</text>
+  <text x="540" y="20" font-family="'Courier New', Courier, monospace" font-size="10" fill="#807c74">···</text>
+
+  <!-- ===================== MAIN MIXER CARD (x=330, y=33, w=215, h=310) ===================== -->
+  <rect x="330" y="33" width="215" height="310" rx="1" fill="#ffffff" stroke="#c4c0b8" stroke-width="1"/>
+
+  <!-- Title -->
+  <text x="340" y="51" font-family="'Courier New', Courier, monospace" font-size="11" fill="#2a2a2a">Main Mixer</text>
+
+  <!-- Fader area background -->
+  <rect x="340" y="56" width="196" height="108" fill="#ede9e2" rx="1"/>
+
+  <!-- 8 vertical faders -->
+  <!-- Fader 1: x=342, height=55 -->
+  <rect x="342" y="60" width="18" height="96" fill="#e4e0d8" rx="1"/>
+  <rect x="342" y="101" width="18" height="55" fill="#b4ccb4" rx="1"/>
+  <rect x="342" y="97" width="18" height="4" fill="#6c6860" rx="1"/>
+
+  <!-- Fader 2: x=364, height=68 -->
+  <rect x="364" y="60" width="18" height="96" fill="#e4e0d8" rx="1"/>
+  <rect x="364" y="88" width="18" height="68" fill="#b4ccb4" rx="1"/>
+  <rect x="364" y="84" width="18" height="4" fill="#6c6860" rx="1"/>
+
+  <!-- Fader 3: x=386, height=42 -->
+  <rect x="386" y="60" width="18" height="96" fill="#e4e0d8" rx="1"/>
+  <rect x="386" y="114" width="18" height="42" fill="#b4ccb4" rx="1"/>
+  <rect x="386" y="110" width="18" height="4" fill="#6c6860" rx="1"/>
+
+  <!-- Fader 4: x=408, height=50 -->
+  <rect x="408" y="60" width="18" height="96" fill="#e4e0d8" rx="1"/>
+  <rect x="408" y="106" width="18" height="50" fill="#b4ccb4" rx="1"/>
+  <rect x="408" y="102" width="18" height="4" fill="#6c6860" rx="1"/>
+
+  <!-- Fader 5: x=430, height=46 -->
+  <rect x="430" y="60" width="18" height="96" fill="#e4e0d8" rx="1"/>
+  <rect x="430" y="110" width="18" height="46" fill="#b4ccb4" rx="1"/>
+  <rect x="430" y="106" width="18" height="4" fill="#6c6860" rx="1"/>
+
+  <!-- Fader 6: x=452, height=38 -->
+  <rect x="452" y="60" width="18" height="96" fill="#e4e0d8" rx="1"/>
+  <rect x="452" y="118" width="18" height="38" fill="#b4ccb4" rx="1"/>
+  <rect x="452" y="114" width="18" height="4" fill="#6c6860" rx="1"/>
+
+  <!-- Fader 7: x=474, height=33 -->
+  <rect x="474" y="60" width="18" height="96" fill="#e4e0d8" rx="1"/>
+  <rect x="474" y="123" width="18" height="33" fill="#b4ccb4" rx="1"/>
+  <rect x="474" y="119" width="18" height="4" fill="#6c6860" rx="1"/>
+
+  <!-- Fader 8: x=496, height=28 -->
+  <rect x="496" y="60" width="18" height="96" fill="#e4e0d8" rx="1"/>
+  <rect x="496" y="128" width="18" height="28" fill="#b4ccb4" rx="1"/>
+  <rect x="496" y="124" width="18" height="4" fill="#6c6860" rx="1"/>
+
+  <!-- Fader labels at y=171 -->
+  <text x="342" y="171" font-family="'Courier New', Courier, monospace" font-size="7.5" fill="#807c74">0.40</text>
+  <text x="364" y="171" font-family="'Courier New', Courier, monospace" font-size="7.5" fill="#807c74">0.40</text>
+  <text x="386" y="171" font-family="'Courier New', Courier, monospace" font-size="7.5" fill="#807c74">0.30</text>
+  <text x="408" y="171" font-family="'Courier New', Courier, monospace" font-size="7.5" fill="#807c74">0.35</text>
+  <text x="430" y="171" font-family="'Courier New', Courier, monospace" font-size="7.5" fill="#807c74">0.32</text>
+  <text x="452" y="171" font-family="'Courier New', Courier, monospace" font-size="7.5" fill="#807c74">0.28</text>
+  <text x="474" y="171" font-family="'Courier New', Courier, monospace" font-size="7.5" fill="#807c74">0.25</text>
+  <text x="496" y="171" font-family="'Courier New', Courier, monospace" font-size="7.5" fill="#807c74">0.20</text>
+
+  <!-- OUT row at y=188 -->
+  <text x="340" y="188" font-family="'Courier New', Courier, monospace" font-size="10" fill="#5a5650">OUT</text>
+  <text x="362" y="188" font-family="'Courier New', Courier, monospace" font-size="10" fill="#565250" font-style="italic">audio</text>
+  <!-- Green square port at x=535, y=182 -->
+  <rect x="535" y="182" width="8" height="8" fill="#009c0a" rx="1"/>
+
+  <!-- Separator line y=196 -->
+  <line x1="330" y1="196" x2="545" y2="196" stroke="#c4c0b8" stroke-width="1"/>
+
+  <!-- IN rows -->
+  <!-- in 1: y=210, circle filled -->
+  <circle cx="338" cy="207" r="3.5" fill="#009c0a"/>
+  <text x="347" y="210" font-family="'Courier New', Courier, monospace" font-size="10" fill="#4e4a44" font-style="italic">in 1</text>
+
+  <!-- in 2: y=224, circle filled -->
+  <circle cx="338" cy="221" r="3.5" fill="#009c0a"/>
+  <text x="347" y="224" font-family="'Courier New', Courier, monospace" font-size="10" fill="#4e4a44" font-style="italic">in 2</text>
+
+  <!-- in 3: y=238, circle filled -->
+  <circle cx="338" cy="235" r="3.5" fill="#009c0a"/>
+  <text x="347" y="238" font-family="'Courier New', Courier, monospace" font-size="10" fill="#4e4a44" font-style="italic">in 3</text>
+
+  <!-- in 4: y=252, circle empty -->
+  <circle cx="338" cy="249" r="3.5" fill="none" stroke="#b4afa6" stroke-width="1"/>
+  <text x="347" y="252" font-family="'Courier New', Courier, monospace" font-size="10" fill="#4e4a44" font-style="italic">in 4</text>
+
+  <!-- in 5: y=266, circle empty -->
+  <circle cx="338" cy="263" r="3.5" fill="none" stroke="#b4afa6" stroke-width="1"/>
+  <text x="347" y="266" font-family="'Courier New', Courier, monospace" font-size="10" fill="#4e4a44" font-style="italic">in 5</text>
+
+  <!-- in 6: y=280, circle empty -->
+  <circle cx="338" cy="277" r="3.5" fill="none" stroke="#b4afa6" stroke-width="1"/>
+  <text x="347" y="280" font-family="'Courier New', Courier, monospace" font-size="10" fill="#4e4a44" font-style="italic">in 6</text>
+
+  <!-- in 7: y=294, circle empty -->
+  <circle cx="338" cy="291" r="3.5" fill="none" stroke="#b4afa6" stroke-width="1"/>
+  <text x="347" y="294" font-family="'Courier New', Courier, monospace" font-size="10" fill="#4e4a44" font-style="italic">in 7</text>
+
+  <!-- in 8: y=308, circle empty -->
+  <circle cx="338" cy="305" r="3.5" fill="none" stroke="#b4afa6" stroke-width="1"/>
+  <text x="347" y="308" font-family="'Courier New', Courier, monospace" font-size="10" fill="#4e4a44" font-style="italic">in 8</text>
+
+  <!-- ===================== KICK_DRUM CARD (x=558, y=33, w=160, h=183) ===================== -->
+  <rect x="558" y="33" width="160" height="183" rx="1" fill="#ffffff" stroke="#c4c0b8" stroke-width="1"/>
+
+  <!-- Close button -->
+  <text x="704" y="47" font-family="'Courier New', Courier, monospace" font-size="11" fill="#807c74">×</text>
+
+  <!-- Title -->
+  <text x="566" y="48" font-family="'Courier New', Courier, monospace" font-size="10" fill="#2a2a2a">Kick_drum-944b488d</text>
+
+  <!-- Sub-label -->
+  <text x="566" y="60" font-family="'Courier New', Courier, monospace" font-size="9" fill="#807c74">Kick_drum <tspan fill="#b4afa6">INST</tspan></text>
+
+  <!-- 16-step sequencer (y=67–87, steps 8×16px with 1px gap, starting x=565) -->
+  <!-- Step 1 (index 0): active #007808 -->
+  <rect x="565" y="67" width="8" height="16" fill="#007808" rx="0.5"/>
+  <!-- Step 2 (index 1): inactive -->
+  <rect x="574" y="67" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <!-- Step 3 (index 2): inactive -->
+  <rect x="583" y="67" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <!-- Step 4 (index 3): inactive -->
+  <rect x="592" y="67" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <!-- Step 5 (index 4): active -->
+  <rect x="601" y="67" width="8" height="16" fill="#007808" rx="0.5"/>
+  <!-- Step 6 (index 5): inactive -->
+  <rect x="610" y="67" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <!-- Step 7 (index 6): inactive -->
+  <rect x="619" y="67" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <!-- Step 8 (index 7): inactive -->
+  <rect x="628" y="67" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <!-- Step 9 (index 8): active -->
+  <rect x="637" y="67" width="8" height="16" fill="#007808" rx="0.5"/>
+  <!-- Step 10 (index 9): inactive -->
+  <rect x="646" y="67" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <!-- Step 11 (index 10): inactive -->
+  <rect x="655" y="67" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <!-- Step 12 (index 11): inactive -->
+  <rect x="664" y="67" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <!-- Step 13 (index 12): active -->
+  <rect x="673" y="67" width="8" height="16" fill="#007808" rx="0.5"/>
+  <!-- Step 14 (index 13): inactive -->
+  <rect x="682" y="67" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <!-- Step 15 (index 14): inactive -->
+  <rect x="691" y="67" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <!-- Step 16 (index 15): inactive -->
+  <rect x="700" y="67" width="8" height="16" fill="#dedad2" rx="0.5"/>
+
+  <!-- Separator y=91 -->
+  <line x1="558" y1="91" x2="718" y2="91" stroke="#c4c0b8" stroke-width="1"/>
+
+  <!-- OUT row y=103 -->
+  <text x="566" y="103" font-family="'Courier New', Courier, monospace" font-size="10" fill="#5a5650">OUT</text>
+  <text x="588" y="103" font-family="'Courier New', Courier, monospace" font-size="10" fill="#565250" font-style="italic">audio</text>
+  <!-- Green square port at x=706, y=97 -->
+  <rect x="706" y="97" width="8" height="8" fill="#009c0a" rx="1"/>
+
+  <!-- Separator y=109 -->
+  <line x1="558" y1="109" x2="718" y2="109" stroke="#c4c0b8" stroke-width="1"/>
+
+  <!-- IN rows starting y=121, step 13 -->
+  <!-- gate: y=121, filled -->
+  <circle cx="559" cy="118" r="3.5" fill="#009c0a"/>
+  <text x="568" y="121" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">gate</text>
+
+  <!-- pitch cv: y=134, filled -->
+  <circle cx="559" cy="131" r="3.5" fill="#009c0a"/>
+  <text x="568" y="134" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">pitch cv</text>
+
+  <!-- tune cv: y=147, filled -->
+  <circle cx="559" cy="144" r="3.5" fill="#009c0a"/>
+  <text x="568" y="147" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">tune cv</text>
+
+  <!-- decay cv: y=160, empty -->
+  <circle cx="559" cy="157" r="3.5" fill="none" stroke="#b4afa6" stroke-width="1"/>
+  <text x="568" y="160" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">decay cv</text>
+
+  <!-- punch cv: y=173, empty -->
+  <circle cx="559" cy="170" r="3.5" fill="none" stroke="#b4afa6" stroke-width="1"/>
+  <text x="568" y="173" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">punch cv</text>
+
+  <!-- sub cv: y=186, empty -->
+  <circle cx="559" cy="183" r="3.5" fill="none" stroke="#b4afa6" stroke-width="1"/>
+  <text x="568" y="186" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">sub cv</text>
+
+  <!-- drive cv: y=199, empty -->
+  <circle cx="559" cy="196" r="3.5" fill="none" stroke="#b4afa6" stroke-width="1"/>
+  <text x="568" y="199" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">drive cv</text>
+
+  <!-- ===================== HIHAT CARD (x=558, y=225, w=160, h=183) ===================== -->
+  <rect x="558" y="225" width="160" height="183" rx="1" fill="#ffffff" stroke="#c4c0b8" stroke-width="1"/>
+
+  <!-- Close button -->
+  <text x="704" y="239" font-family="'Courier New', Courier, monospace" font-size="11" fill="#807c74">×</text>
+
+  <!-- Title -->
+  <text x="566" y="240" font-family="'Courier New', Courier, monospace" font-size="10" fill="#2a2a2a">Hihat-6ec48f8e</text>
+
+  <!-- Sub-label -->
+  <text x="566" y="252" font-family="'Courier New', Courier, monospace" font-size="9" fill="#807c74">Hihat <tspan fill="#b4afa6">INST</tspan></text>
+
+  <!-- 16-step sequencer (active: every other = 8th notes, indices 0,2,4,6,8,10,12,14) -->
+  <!-- Step 1 (index 0): active -->
+  <rect x="565" y="259" width="8" height="16" fill="#007808" rx="0.5"/>
+  <!-- Step 2 (index 1): inactive -->
+  <rect x="574" y="259" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <!-- Step 3 (index 2): active -->
+  <rect x="583" y="259" width="8" height="16" fill="#007808" rx="0.5"/>
+  <!-- Step 4 (index 3): inactive -->
+  <rect x="592" y="259" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <!-- Step 5 (index 4): active -->
+  <rect x="601" y="259" width="8" height="16" fill="#007808" rx="0.5"/>
+  <!-- Step 6 (index 5): inactive -->
+  <rect x="610" y="259" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <!-- Step 7 (index 6): active -->
+  <rect x="619" y="259" width="8" height="16" fill="#007808" rx="0.5"/>
+  <!-- Step 8 (index 7): inactive -->
+  <rect x="628" y="259" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <!-- Step 9 (index 8): active -->
+  <rect x="637" y="259" width="8" height="16" fill="#007808" rx="0.5"/>
+  <!-- Step 10 (index 9): inactive -->
+  <rect x="646" y="259" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <!-- Step 11 (index 10): active -->
+  <rect x="655" y="259" width="8" height="16" fill="#007808" rx="0.5"/>
+  <!-- Step 12 (index 11): inactive -->
+  <rect x="664" y="259" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <!-- Step 13 (index 12): active -->
+  <rect x="673" y="259" width="8" height="16" fill="#007808" rx="0.5"/>
+  <!-- Step 14 (index 13): inactive -->
+  <rect x="682" y="259" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <!-- Step 15 (index 14): active -->
+  <rect x="691" y="259" width="8" height="16" fill="#007808" rx="0.5"/>
+  <!-- Step 16 (index 15): inactive -->
+  <rect x="700" y="259" width="8" height="16" fill="#dedad2" rx="0.5"/>
+
+  <!-- Separator y=283 (225+58) -->
+  <line x1="558" y1="283" x2="718" y2="283" stroke="#c4c0b8" stroke-width="1"/>
+
+  <!-- OUT row -->
+  <text x="566" y="295" font-family="'Courier New', Courier, monospace" font-size="10" fill="#5a5650">OUT</text>
+  <text x="588" y="295" font-family="'Courier New', Courier, monospace" font-size="10" fill="#565250" font-style="italic">audio</text>
+  <!-- Green square port at x=706, y=297 (225+72) -->
+  <rect x="706" y="289" width="8" height="8" fill="#009c0a" rx="1"/>
+
+  <!-- Separator y=301 -->
+  <line x1="558" y1="301" x2="718" y2="301" stroke="#c4c0b8" stroke-width="1"/>
+
+  <!-- IN rows starting y=313, step 13 -->
+  <!-- gate: y=313, filled -->
+  <circle cx="559" cy="310" r="3.5" fill="#009c0a"/>
+  <text x="568" y="313" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">gate</text>
+
+  <!-- decay cv: y=326, filled -->
+  <circle cx="559" cy="323" r="3.5" fill="#009c0a"/>
+  <text x="568" y="326" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">decay cv</text>
+
+  <!-- tone cv: y=339, empty -->
+  <circle cx="559" cy="336" r="3.5" fill="none" stroke="#b4afa6" stroke-width="1"/>
+  <text x="568" y="339" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">tone cv</text>
+
+  <!-- edge cv: y=352, empty -->
+  <circle cx="559" cy="349" r="3.5" fill="none" stroke="#b4afa6" stroke-width="1"/>
+  <text x="568" y="352" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">edge cv</text>
+
+  <!-- ===================== GREEN CABLES ===================== -->
+  <!-- Cable 1: Main Mixer OUT -> Kick_drum gate -->
+  <path d="M 543 186 C 590 360 520 360 559 119" stroke="#009c0a" stroke-width="1.5" fill="none"/>
+
+  <!-- Cable 2: Main Mixer OUT -> Kick_drum pitch cv -->
+  <path d="M 543 186 C 592 370 518 370 559 132" stroke="#009c0a" stroke-width="1.5" fill="none"/>
+
+  <!-- Cable 3: Main Mixer OUT -> Hihat gate -->
+  <path d="M 543 186 C 595 420 515 430 559 319" stroke="#009c0a" stroke-width="1.5" fill="none"/>
+
+
+  <!-- ===================== SNARE CARD (x=728, y=33, w=160, h=183) ===================== -->
+  <rect x="728" y="33" width="160" height="183" rx="1" fill="#ffffff" stroke="#c4c0b8" stroke-width="1"/>
+  <text x="874" y="47" font-family="'Courier New', Courier, monospace" font-size="11" fill="#807c74">×</text>
+  <text x="736" y="48" font-family="'Courier New', Courier, monospace" font-size="10" fill="#2a2a2a">Snare-7bc0ad5b</text>
+  <text x="736" y="60" font-family="'Courier New', Courier, monospace" font-size="9" fill="#807c74">Snare <tspan fill="#b4afa6">INST</tspan></text>
+  <!-- Sequencer: snare backbeat indices 4,12 -->
+  <rect x="735" y="67" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="744" y="67" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="753" y="67" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="762" y="67" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="771" y="67" width="8" height="16" fill="#007808" rx="0.5"/>
+  <rect x="780" y="67" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="789" y="67" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="798" y="67" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="807" y="67" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="816" y="67" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="825" y="67" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="834" y="67" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="843" y="67" width="8" height="16" fill="#007808" rx="0.5"/>
+  <rect x="852" y="67" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="861" y="67" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="870" y="67" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <line x1="728" y1="91" x2="888" y2="91" stroke="#c4c0b8" stroke-width="1"/>
+  <text x="736" y="103" font-family="'Courier New', Courier, monospace" font-size="10" fill="#5a5650">OUT</text>
+  <text x="758" y="103" font-family="'Courier New', Courier, monospace" font-size="10" fill="#565250" font-style="italic">audio</text>
+  <rect x="878" y="97" width="8" height="8" fill="#009c0a" rx="1"/>
+  <line x1="728" y1="109" x2="888" y2="109" stroke="#c4c0b8" stroke-width="1"/>
+  <circle cx="729" cy="118" r="3.5" fill="#009c0a"/>
+  <text x="738" y="121" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">gate</text>
+  <circle cx="729" cy="131" r="3.5" fill="#009c0a"/>
+  <text x="738" y="134" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">pitch cv</text>
+  <circle cx="729" cy="144" r="3.5" fill="none" stroke="#b4afa6" stroke-width="1"/>
+  <text x="738" y="147" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">decay cv</text>
+  <circle cx="729" cy="157" r="3.5" fill="none" stroke="#b4afa6" stroke-width="1"/>
+  <text x="738" y="160" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">noise cv</text>
+  <circle cx="729" cy="170" r="3.5" fill="none" stroke="#b4afa6" stroke-width="1"/>
+  <text x="738" y="173" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">snap cv</text>
+
+  <!-- Cable: Main Mixer OUT -> Snare gate -->
+  <path d="M 543 186 C 620 430 700 420 729 118" stroke="#009c0a" stroke-width="1.5" fill="none"/>
+
+  <!-- ===================== ROW 2 MODULES (y=418) ===================== -->
+  <!-- Bass_synth (x=558, y=418) -->
+  <rect x="558" y="418" width="160" height="183" rx="1" fill="#ffffff" stroke="#c4c0b8" stroke-width="1"/>
+  <text x="704" y="432" font-family="'Courier New', Courier, monospace" font-size="11" fill="#807c74">×</text>
+  <text x="566" y="433" font-family="'Courier New', Courier, monospace" font-size="10" fill="#2a2a2a">Bass_synth-3c8a1f2e</text>
+  <text x="566" y="445" font-family="'Courier New', Courier, monospace" font-size="9" fill="#807c74">Bass <tspan fill="#b4afa6">INST</tspan></text>
+  <!-- Sequencer: walking bass, indices 0,2,5,8,10,13 -->
+  <rect x="565" y="452" width="8" height="16" fill="#007808" rx="0.5"/>
+  <rect x="574" y="452" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="583" y="452" width="8" height="16" fill="#007808" rx="0.5"/>
+  <rect x="592" y="452" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="601" y="452" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="610" y="452" width="8" height="16" fill="#007808" rx="0.5"/>
+  <rect x="619" y="452" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="628" y="452" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="637" y="452" width="8" height="16" fill="#007808" rx="0.5"/>
+  <rect x="646" y="452" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="655" y="452" width="8" height="16" fill="#007808" rx="0.5"/>
+  <rect x="664" y="452" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="673" y="452" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="682" y="452" width="8" height="16" fill="#007808" rx="0.5"/>
+  <rect x="691" y="452" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="700" y="452" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <line x1="558" y1="476" x2="718" y2="476" stroke="#c4c0b8" stroke-width="1"/>
+  <text x="566" y="488" font-family="'Courier New', Courier, monospace" font-size="10" fill="#5a5650">OUT</text>
+  <text x="588" y="488" font-family="'Courier New', Courier, monospace" font-size="10" fill="#565250" font-style="italic">audio</text>
+  <rect x="706" y="482" width="8" height="8" fill="#009c0a" rx="1"/>
+  <line x1="558" y1="494" x2="718" y2="494" stroke="#c4c0b8" stroke-width="1"/>
+  <circle cx="559" cy="503" r="3.5" fill="none" stroke="#b4afa6" stroke-width="1"/>
+  <text x="568" y="506" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">gate</text>
+  <circle cx="559" cy="516" r="3.5" fill="none" stroke="#b4afa6" stroke-width="1"/>
+  <text x="568" y="519" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">pitch cv</text>
+  <circle cx="559" cy="529" r="3.5" fill="none" stroke="#b4afa6" stroke-width="1"/>
+  <text x="568" y="532" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">tune cv</text>
+  <circle cx="559" cy="542" r="3.5" fill="none" stroke="#b4afa6" stroke-width="1"/>
+  <text x="568" y="545" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">decay cv</text>
+  <circle cx="559" cy="555" r="3.5" fill="none" stroke="#b4afa6" stroke-width="1"/>
+  <text x="568" y="558" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">filter cv</text>
+  <circle cx="559" cy="568" r="3.5" fill="none" stroke="#b4afa6" stroke-width="1"/>
+  <text x="568" y="571" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">drive cv</text>
+
+  <!-- FMtone (x=728, y=418) -->
+  <rect x="728" y="418" width="160" height="183" rx="1" fill="#ffffff" stroke="#c4c0b8" stroke-width="1"/>
+  <text x="874" y="432" font-family="'Courier New', Courier, monospace" font-size="11" fill="#807c74">×</text>
+  <text x="736" y="433" font-family="'Courier New', Courier, monospace" font-size="10" fill="#2a2a2a">FMtone-9e4b2c1a</text>
+  <text x="736" y="445" font-family="'Courier New', Courier, monospace" font-size="9" fill="#807c74">FMsyn <tspan fill="#b4afa6">INST</tspan></text>
+  <!-- Sequencer: sparse melody, indices 0,3,7,11,14 -->
+  <rect x="735" y="452" width="8" height="16" fill="#007808" rx="0.5"/>
+  <rect x="744" y="452" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="753" y="452" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="762" y="452" width="8" height="16" fill="#007808" rx="0.5"/>
+  <rect x="771" y="452" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="780" y="452" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="789" y="452" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="798" y="452" width="8" height="16" fill="#007808" rx="0.5"/>
+  <rect x="807" y="452" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="816" y="452" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="825" y="452" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="834" y="452" width="8" height="16" fill="#007808" rx="0.5"/>
+  <rect x="843" y="452" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="852" y="452" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <rect x="861" y="452" width="8" height="16" fill="#007808" rx="0.5"/>
+  <rect x="870" y="452" width="8" height="16" fill="#dedad2" rx="0.5"/>
+  <line x1="728" y1="476" x2="888" y2="476" stroke="#c4c0b8" stroke-width="1"/>
+  <text x="736" y="488" font-family="'Courier New', Courier, monospace" font-size="10" fill="#5a5650">OUT</text>
+  <text x="758" y="488" font-family="'Courier New', Courier, monospace" font-size="10" fill="#565250" font-style="italic">audio</text>
+  <rect x="878" y="482" width="8" height="8" fill="#009c0a" rx="1"/>
+  <line x1="728" y1="494" x2="888" y2="494" stroke="#c4c0b8" stroke-width="1"/>
+  <circle cx="729" cy="503" r="3.5" fill="none" stroke="#b4afa6" stroke-width="1"/>
+  <text x="738" y="506" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">gate</text>
+  <circle cx="729" cy="516" r="3.5" fill="none" stroke="#b4afa6" stroke-width="1"/>
+  <text x="738" y="519" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">freq cv</text>
+  <circle cx="729" cy="529" r="3.5" fill="none" stroke="#b4afa6" stroke-width="1"/>
+  <text x="738" y="532" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">ratio cv</text>
+  <circle cx="729" cy="542" r="3.5" fill="none" stroke="#b4afa6" stroke-width="1"/>
+  <text x="738" y="545" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">depth cv</text>
+  <circle cx="729" cy="555" r="3.5" fill="none" stroke="#b4afa6" stroke-width="1"/>
+  <text x="738" y="558" font-family="'Courier New', Courier, monospace" font-size="9.5" fill="#4e4a44" font-style="italic">env cv</text>
+
+
+  </g>
+</svg>

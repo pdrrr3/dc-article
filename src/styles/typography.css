@@ -1,0 +1,108 @@
+/* ════════════════════════════════════════════════════════════════
+   TYPOGRAPHY LEGEND — edit type styles here, used everywhere
+   ════════════════════════════════════════════════════════════════
+
+   Fonts:
+     --font-heading : LinLibertine   → module name only
+     --font-mono    : FragmentMono   → everything else
+
+   Usage in components:
+     .type-title        → main app title (DRONE)
+     .type-section      → section/layer headings
+     .type-module       → module name in card header (LinLibertine)
+     .type-label        → data labels (param names, IN/OUT)
+     .type-value        → data values (param numbers)
+     .type-button       → button text
+     .type-status       → status text (LIVE, OFFLINE)
+     .type-tag          → small tags (INST, [wasm], type name)
+     .type-port         → port name labels
+     .type-hint         → hints, placeholders, muted info
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── Title — app name ─────────────────────────────────────────── */
+.type-title {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
+}
+
+/* ── Section — layer headings, modal titles ───────────────────── */
+.type-section {
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  text-transform: capitalize;
+}
+
+/* ── Module — module name in card header (the only LinLibertine) */
+.type-module {
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  text-transform: capitalize;
+}
+
+/* ── Label — data labels (param names, IN/OUT) ────────────────── */
+.type-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+}
+
+/* ── Value — data values, numbers ─────────────────────────────── */
+.type-value {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Button — button labels ───────────────────────────────────── */
+.type-button {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: capitalize;
+}
+
+/* ── Status — connection status text ──────────────────────────── */
+.type-status {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: capitalize;
+}
+
+/* ── Tag — small tags (INST, type name) ───────────────────────── */
+.type-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: capitalize;
+}
+
+/* ── Port — port name labels ──────────────────────────────────── */
+.type-port {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+}
+
+/* ── Hint — placeholders, muted helper text ───────────────────── */
+.type-hint {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  font-style: italic;
+}

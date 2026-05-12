@@ -1,6 +1,6 @@
 @font-face {
   font-family: 'Linux Libertine O';
-  src: url('LinLibertine_R.otf') format('opentype');
+  src: url('/fonts/LinLibertine_R.otf') format('opentype');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -8,7 +8,7 @@
 
 @font-face {
   font-family: 'Linux Libertine O';
-  src: url('LinLibertine_RI.otf') format('opentype');
+  src: url('/fonts/LinLibertine_RI.otf') format('opentype');
   font-weight: 400;
   font-style: italic;
   font-display: swap;
@@ -16,7 +16,7 @@
 
 @font-face {
   font-family: 'Linux Libertine Mono O';
-  src: url('LinLibertine_M.otf') format('opentype');
+  src: url('/fonts/LinLibertine_M.otf') format('opentype');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -235,6 +235,420 @@ body {
   height: auto;
 }
 
+/* ── Interactive session ── */
+
+.interactive-section {
+  width: 100vw;
+  margin: 0;
+  padding: 0 24px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  position: relative;
+  z-index: 1000;
+}
+
+
+.interactive-section__head {
+  width: 100%;
+  padding: 0 24px;
+}
+
+.interactive-section__title {
+  font-family: 'Linux Libertine Mono O', 'Fragment Mono', monospace;
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.interactive-section__intro {
+  font-size: 16px;
+  line-height: 1.55;
+  letter-spacing: 0.42px;
+}
+
+.drone-interactive-root {
+  width: 100%;
+  min-height: 560px;
+  background: transparent;
+  position: relative;
+}
+
+.dcx-shell {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 560px;
+  width: 100%;
+  background: #000;
+}
+
+.dcx-left {
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-width: 0;
+  background: #000;
+}
+
+.dcx-left-head {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: 'Linux Libertine Mono O', 'Fragment Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #8899aa;
+}
+
+.dcx-chat {
+  padding: 14px 14px 8px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dcx-msg {
+  max-width: 88%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 9px 11px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.45;
+  letter-spacing: 0.2px;
+  white-space: pre-wrap;
+  background: #0e0e10;
+  color: #cccccc;
+}
+
+.dcx-msg--user {
+  margin-left: auto;
+  background: #11141a;
+  color: #ffffff;
+  border-color: #334155;
+}
+
+.dcx-msg--assistant {
+  margin-right: auto;
+}
+
+.dcx-msg--cmd {
+  margin-right: auto;
+  font-family: 'Linux Libertine Mono O', 'Fragment Mono', monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  letter-spacing: 0.45px;
+  color: #44dd44;
+  background: #090b0f;
+}
+
+.dcx-typing {
+  width: 48px;
+  padding: 8px 10px;
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: #0e0e10;
+}
+
+.dcx-typing span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #8899aa;
+  animation: dcx-bounce 0.9s infinite ease-in-out;
+}
+
+.dcx-typing span:nth-child(2) { animation-delay: 0.15s; }
+.dcx-typing span:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes dcx-bounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.45; }
+  40% { transform: translateY(-2px); opacity: 1; }
+}
+
+.dcx-actions {
+  padding: 10px 12px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dcx-action-btn {
+  font-family: 'Linux Libertine Mono O', 'Fragment Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  border: 1px solid #8899aa;
+  background: #0e0e10;
+  color: #8899aa;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.dcx-action-btn:hover {
+  background: #8899aa;
+  color: #000;
+  border-color: #8899aa;
+}
+
+.dcx-action-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.dcx-right {
+  position: relative;
+  overflow: hidden;
+  background: #050505;
+}
+
+.dcx-right-head {
+  position: absolute;
+  left: 12px;
+  top: 10px;
+  z-index: 30;
+  font-family: 'Linux Libertine Mono O', 'Fragment Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: #8899aa;
+  pointer-events: none;
+}
+
+.dcx-status {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  z-index: 30;
+  font-family: 'Linux Libertine Mono O', 'Fragment Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.9px;
+  color: #cccccc;
+  background: rgba(10, 10, 10, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 6px 8px;
+  white-space: nowrap;
+}
+
+.dcx-graph {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.dcx-cables,
+.dcx-scope {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.dcx-module {
+  position: absolute;
+  width: 190px;
+  min-height: 84px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #0e0e10;
+  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.35);
+  user-select: none;
+}
+
+.dcx-module--mixer {
+  border-color: rgba(68, 221, 68, 0.5);
+  background: #0a0f0a;
+}
+
+.dcx-module-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 8px 5px;
+  cursor: grab;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dcx-module-head:active {
+  cursor: grabbing;
+}
+
+.dcx-module-name {
+  font-family: 'Linux Libertine Mono O', 'Fragment Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.65px;
+  text-transform: uppercase;
+  color: #cccccc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dcx-module-type {
+  font-family: 'Linux Libertine Mono O', 'Fragment Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.55px;
+  text-transform: lowercase;
+  color: #8899aa;
+}
+
+.dcx-ports {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 7px 8px;
+}
+
+.dcx-port {
+  font-family: 'Linux Libertine Mono O', 'Fragment Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.4px;
+  padding: 3px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #050505;
+  color: #cccccc;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.dcx-port--input {
+  border-style: dashed;
+}
+
+.dcx-port--active {
+  background: #44dd44;
+  border-color: #44dd44;
+  color: #000;
+}
+
+.port-dot {
+  width: 10px;
+  height: 10px;
+  border: 1px solid #666;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.port-dot.output {
+  background: transparent;
+}
+
+.port-dot.input {
+  border-radius: 50%;
+  background: transparent;
+}
+
+.dcx-port--active .port-dot.output {
+  border-color: #44dd44;
+  background: #44dd44;
+}
+
+.dcx-module-params {
+  padding: 0 8px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dcx-param {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+  font-family: 'Linux Libertine Mono O', 'Fragment Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.35px;
+  color: #8899aa;
+}
+
+.dcx-param input[type="range"] {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.dcx-context {
+  position: absolute;
+  z-index: 40;
+  width: 220px;
+  max-height: 240px;
+  overflow: auto;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: #0a0a0f;
+  box-shadow: 0 14px 26px rgba(0, 0, 0, 0.55);
+}
+
+.dcx-context button {
+  width: 100%;
+  display: block;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 7px 10px;
+  font-family: 'Linux Libertine Mono O', 'Fragment Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+  color: #cccccc;
+}
+
+.dcx-context button:hover {
+  background: #1a1a1a;
+  color: #44dd44;
+}
+
+.dcx-global-mute {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 1200;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #0e0e10;
+  color: #cccccc;
+  font-family: 'Linux Libertine Mono O', 'Fragment Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.75px;
+  text-transform: uppercase;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.dcx-global-mute.is-muted {
+  background: #11141a;
+  border-color: #334155;
+  color: #ffffff;
+}
+
+.type-module {
+  font-family: 'Linux Libertine Mono O', 'Fragment Mono', monospace;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.65px;
+  text-transform: uppercase;
+}
+
+.type-tag,
+.type-label,
+.type-value,
+.type-port {
+  font-family: 'Linux Libertine Mono O', 'Fragment Mono', monospace;
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0.45px;
+}
+
 /* ── Responsive ── */
 
 @media (max-width: 960px) {
@@ -281,6 +695,17 @@ body {
 
   .terminal-block__right {
     /* height synced to left panel via JS */
+  }
+
+  .dcx-shell {
+    grid-template-columns: 1fr;
+    height: 760px;
+  }
+
+  .dcx-left {
+    min-height: 340px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   }
 
   body {

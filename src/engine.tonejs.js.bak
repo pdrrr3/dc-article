@@ -1,0 +1,1285 @@
+// Local sound engine — replaces drone's WebSocket + REST backend with an
+// in-browser Tone.js graph mirrored to the same Solid store the drone client
+// reads. Components fetch /layer/...; we intercept and mutate the store +
+// graph locally. No real network.
+
+import * as Tone from 'tone';
+import {
+  session,
+  setSession,
+  setModuleTypes,
+  setWasmTypes,
+  pushLog,
+  setWsConnected,
+  getPortDefs,
+  getParamDefs,
+} from './store';
+
+// ── ID helpers ────────────────────────────────────────────────
+let _seq = 0;
+const newId = (prefix) => `${prefix}_${Date.now().toString(36)}_${(++_seq).toString(36)}`;
+
+// ── Module catalog (the types we provide audible/visual support for) ──
+const SUPPORTED_TYPES = [
+  // sources / oscillators
+  'oscillator', 'pwm_oscillator', 'fm_operator', 'supersaw', 'wavetable',
+  'additive_osc', 'phase_distortion', 'noise_gen',
+  // control
+  'lfo', 'adsr', 'envelope_follower', 'slew_limiter', 'sample_hold',
+  'attenuverter', 'pitch_quantizer',
+  // filters / shapers
+  'filter', 'svf', 'moog_filter', 'ms20_filter', 'formant_filter', 'comb_filter',
+  'wavefolder', 'ring_mod', 'bitcrusher', 'tape_saturation',
+  // gain / dynamics
+  'vca', 'compressor', 'stereo_panner',
+  // delays
+  'delay_line', 'reverb', 'chorus', 'phaser', 'flanger',
+  // timing
+  'clock', 'clock_divider', 'sequencer', 'global_seq', 'euclidean',
+  'arpeggiator', 'bernoulli_gate',
+  // instruments
+  'kick_drum', 'snare', 'hihat', 'bass_line',
+  // mixing
+  'mixer', 'cv_mixer',
+  // utility
+  'scope',
+];
+
+// ── Per-module Tone instances + per-connection refs ───────────
+// nodeMap: Map<moduleId, { kind, nodes, triggers, emits, setters, tick, dispose }>
+const nodeMap = new Map();
+// connMap: Map<connectionId, disposer>
+const connMap = new Map();
+const layerBus = new Map();
+let masterOut = null;
+let audioReady = false;
+
+// ── Local sequencer state per module (steps, plocks) ──────────
+// seqState: Map<moduleId, { steps: [{gate, pitch, velocity, plocks: {target_id:{param:value}}}], clockListeners: Set<fn> }>
+const seqState = new Map();
+
+// ── ensureAudio ───────────────────────────────────────────────
+export async function ensureAudio() {
+  if (audioReady) return;
+  await Tone.start();
+  masterOut = new Tone.Gain(0.85).toDestination();
+  Tone.getTransport().bpm.value = 120;
+  Tone.getTransport().start();
+  audioReady = true;
+  // Materialize anything created before audio was ready
+  for (const lid of Object.keys(session.layers || {})) ensureLayerBus(lid);
+  for (const lid of Object.keys(session.layers || {})) {
+    const layer = session.layers[lid];
+    for (const mid of Object.keys(layer.modules || {})) realizeModule(lid, mid);
+    for (const c of layer.connections || []) realizeConnection(lid, c);
+  }
+}
+
+function ensureLayerBus(layerId) {
+  if (!audioReady) return null;
+  if (layerBus.has(layerId)) return layerBus.get(layerId);
+  const bus = new Tone.Gain(1);
+  const meter = new Tone.Meter({ channels: 2, smoothing: 0.85 });
+  bus.connect(meter);
+  bus.connect(masterOut);
+  layerBus.set(layerId, { bus, meter });
+  return { bus, meter };
+}
+
+// ── Factory helpers ───────────────────────────────────────────
+const WF = ['sine', 'sawtooth', 'square', 'triangle'];
+function wfName(idx) { return WF[Math.round(idx ?? 0)] || 'sine'; }
+
+// Emitter: a tiny synchronous bus for gate-style events.
+function makeEmitter() {
+  const subs = new Set();
+  return {
+    subscribe: (fn) => { subs.add(fn); return () => subs.delete(fn); },
+    emit: (time, vel = 1, pitch = null) => { for (const fn of subs) try { fn(time, vel, pitch); } catch {} },
+    size: () => subs.size,
+  };
+}
+
+// ── Module factories ──────────────────────────────────────────
+function makeOscillator(params, type) {
+  const osc = new Tone.Oscillator({
+    frequency: params.frequency ?? 440,
+    type: type === 'pwm_oscillator' ? 'square' : wfName(params.waveform),
+  }).start();
+  const amp = new Tone.Gain(params.amplitude ?? 0.4);
+  osc.connect(amp);
+  return {
+    nodes: { audio_out: amp, pitch_cv: osc.frequency },
+    setters: {
+      frequency: (v) => osc.frequency.rampTo(v, 0.02),
+      amplitude: (v) => amp.gain.rampTo(v, 0.02),
+      waveform: (v) => { if (type !== 'pwm_oscillator') osc.type = wfName(v); },
+      pulse_width: () => {}, pw_mod_depth: () => {},
+    },
+    dispose: () => { osc.stop(); osc.dispose(); amp.dispose(); },
+  };
+}
+
+function makeSupersaw(params) {
+  const voices = Math.max(1, Math.round(params.voices ?? 7));
+  const baseF = params.frequency ?? 440;
+  const detune = params.detune ?? 0.3;
+  const oscs = [];
+  const amp = new Tone.Gain(params.amplitude ?? 0.3);
+  for (let i = 0; i < voices; i++) {
+    const o = new Tone.Oscillator({ type: 'sawtooth', frequency: baseF, detune: ((i - (voices - 1) / 2) / voices) * detune * 100 }).start();
+    o.connect(amp);
+    oscs.push(o);
+  }
+  return {
+    nodes: { audio_out: amp, out_l: amp, out_r: amp, pitch_cv: oscs[0].frequency },
+    setters: {
+      frequency: (v) => oscs.forEach((o) => o.frequency.rampTo(v, 0.02)),
+      amplitude: (v) => amp.gain.rampTo(v, 0.02),
+      detune: (v) => oscs.forEach((o, i) => { o.detune.rampTo(((i - (voices - 1) / 2) / voices) * v * 100, 0.03); }),
+      voices: () => {}, mix: () => {}, stereo_spread: () => {},
+    },
+    dispose: () => { oscs.forEach((o) => { o.stop(); o.dispose(); }); amp.dispose(); },
+  };
+}
+
+function makeWavetable(params) {
+  // Simple morphing: sine ↔ sawtooth weighted by position.
+  const a = new Tone.Oscillator({ type: 'sine', frequency: params.frequency ?? 440 }).start();
+  const b = new Tone.Oscillator({ type: 'sawtooth', frequency: params.frequency ?? 440 }).start();
+  const ga = new Tone.Gain(1 - (params.position ?? 0));
+  const gb = new Tone.Gain(params.position ?? 0);
+  const amp = new Tone.Gain(params.amplitude ?? 0.4);
+  a.connect(ga); ga.connect(amp); b.connect(gb); gb.connect(amp);
+  return {
+    nodes: { audio_out: amp, pitch_cv: a.frequency },
+    setters: {
+      frequency: (v) => { a.frequency.rampTo(v, 0.02); b.frequency.rampTo(v, 0.02); },
+      amplitude: (v) => amp.gain.rampTo(v, 0.02),
+      position: (v) => { ga.gain.rampTo(1 - v, 0.02); gb.gain.rampTo(v, 0.02); },
+    },
+    dispose: () => { a.stop(); b.stop(); a.dispose(); b.dispose(); ga.dispose(); gb.dispose(); amp.dispose(); },
+  };
+}
+
+function makeAdditive(params) {
+  const fund = new Tone.Oscillator({ type: 'sine', frequency: params.frequency ?? 220 }).start();
+  const partials = [];
+  const amp = new Tone.Gain(params.amplitude ?? 0.3);
+  const harmonics = 8;
+  for (let i = 0; i < harmonics; i++) {
+    const o = new Tone.Oscillator({ type: 'sine', frequency: (params.frequency ?? 220) * (i + 1) }).start();
+    const g = new Tone.Gain((params[`h${i + 1}`] ?? (i === 0 ? 1 : 1 / (i + 1))) * 0.4);
+    o.connect(g); g.connect(amp);
+    partials.push({ o, g });
+  }
+  const setters = {
+    frequency: (v) => { fund.frequency.rampTo(v, 0.02); partials.forEach(({ o }, i) => o.frequency.rampTo(v * (i + 1), 0.02)); },
+    amplitude: (v) => amp.gain.rampTo(v, 0.02),
+  };
+  for (let i = 0; i < 16; i++) {
+    const idx = i;
+    setters[`h${i + 1}`] = (v) => { if (partials[idx]) partials[idx].g.gain.rampTo(v * 0.4, 0.05); };
+  }
+  return {
+    nodes: { audio_out: amp, pitch_cv: fund.frequency },
+    setters,
+    dispose: () => { fund.stop(); fund.dispose(); partials.forEach(({ o, g }) => { o.stop(); o.dispose(); g.dispose(); }); amp.dispose(); },
+  };
+}
+
+function makePhaseDistortion(params) {
+  const osc = new Tone.Oscillator({ type: 'sawtooth', frequency: params.frequency ?? 220 }).start();
+  const shaper = new Tone.WaveShaper((x) => Math.tanh(x * (1 + (params.distortion ?? 0) * 6)));
+  const amp = new Tone.Gain(params.amplitude ?? 0.3);
+  osc.connect(shaper); shaper.connect(amp);
+  return {
+    nodes: { audio_out: amp, pitch_cv: osc.frequency },
+    setters: {
+      frequency: (v) => osc.frequency.rampTo(v, 0.02),
+      amplitude: (v) => amp.gain.rampTo(v, 0.02),
+      distortion: (v) => { shaper.setMap((x) => Math.tanh(x * (1 + v * 6))); },
+      mode: () => {},
+    },
+    dispose: () => { osc.stop(); osc.dispose(); shaper.dispose(); amp.dispose(); },
+  };
+}
+
+function makeFm(params) {
+  const car = new Tone.Oscillator({ frequency: params.frequency ?? 440, type: 'sine' }).start();
+  const mod = new Tone.Oscillator({ frequency: (params.frequency ?? 440) * (params.ratio ?? 1), type: 'sine' }).start();
+  const modGain = new Tone.Gain((params.mod_index ?? 0) * 50);
+  mod.connect(modGain);
+  modGain.connect(car.frequency);
+  const amp = new Tone.Gain(params.level ?? 0.5);
+  car.connect(amp);
+  const state = { freq: params.frequency ?? 440, ratio: params.ratio ?? 1 };
+  return {
+    nodes: { audio_out: amp, pitch_cv: car.frequency, mod_cv: modGain.gain },
+    setters: {
+      frequency: (v) => { car.frequency.rampTo(v, 0.02); state.freq = v; mod.frequency.rampTo(v * state.ratio, 0.02); },
+      ratio: (v) => { state.ratio = v; mod.frequency.rampTo(state.freq * v, 0.02); },
+      mod_index: (v) => modGain.gain.rampTo(v * 50, 0.02),
+      level: (v) => amp.gain.rampTo(v, 0.02),
+      feedback: () => {},
+    },
+    dispose: () => { car.stop(); mod.stop(); car.dispose(); mod.dispose(); modGain.dispose(); amp.dispose(); },
+  };
+}
+
+function makeLfo(params) {
+  const lfo = new Tone.LFO({
+    frequency: params.rate ?? 1,
+    min: -(params.depth ?? 1) * 1000,
+    max: (params.depth ?? 1) * 1000,
+    type: wfName(params.waveform),
+  }).start();
+  return {
+    nodes: { cv_out: lfo, rate_cv: lfo.frequency },
+    setters: {
+      rate: (v) => lfo.frequency.rampTo(v, 0.05),
+      depth: (v) => { lfo.min = -v * 1000; lfo.max = v * 1000; },
+      waveform: (v) => { lfo.type = wfName(v); },
+    },
+    dispose: () => { lfo.stop(); lfo.dispose(); },
+  };
+}
+
+function makeAdsr(params) {
+  const env = new Tone.Envelope({
+    attack: params.attack ?? 0.01,
+    decay: params.decay ?? 0.1,
+    sustain: params.sustain ?? 0.7,
+    release: params.release ?? 0.3,
+  });
+  // Drive a Tone.Signal scaled by the envelope output. We expose env directly as cv_out.
+  return {
+    nodes: { cv_out: env },
+    triggers: { gate: (time, vel) => { env.triggerAttackRelease(0.05, time, vel ?? 1); } },
+    setters: {
+      attack: (v) => { env.attack = v; },
+      decay: (v) => { env.decay = v; },
+      sustain: (v) => { env.sustain = v; },
+      release: (v) => { env.release = v; },
+    },
+    dispose: () => env.dispose(),
+  };
+}
+
+function makeVca(params) {
+  const gain = new Tone.Gain(params.level ?? 0.8);
+  return {
+    nodes: { audio_in: gain, audio_out: gain, level_cv: gain.gain },
+    setters: { level: (v) => gain.gain.rampTo(v, 0.02) },
+    dispose: () => gain.dispose(),
+  };
+}
+
+function makeFilter(params, type) {
+  const kinds = ['lowpass', 'bandpass', 'highpass'];
+  const rolloff = type === 'moog_filter' || type === 'ms20_filter' ? -24 : -12;
+  // For SVF we expose four parallel filter outputs; for other filters there's
+  // just one whose type is configurable via the editor.
+  if (type === 'svf') {
+    const input = new Tone.Gain(1);
+    const lp = new Tone.Filter({ type: 'lowpass',  frequency: params.cutoff ?? 1000, Q: params.resonance ?? 1, rolloff });
+    const hp = new Tone.Filter({ type: 'highpass', frequency: params.cutoff ?? 1000, Q: params.resonance ?? 1, rolloff });
+    const bp = new Tone.Filter({ type: 'bandpass', frequency: params.cutoff ?? 1000, Q: params.resonance ?? 1, rolloff });
+    const notch = new Tone.Filter({ type: 'notch', frequency: params.cutoff ?? 1000, Q: params.resonance ?? 1, rolloff });
+    for (const f of [lp, hp, bp, notch]) input.connect(f);
+    return {
+      nodes: {
+        audio_in: input, audio_out: lp,
+        lp, hp, bp, notch,
+        cutoff_cv: lp.frequency, res_cv: lp.Q,
+      },
+      setters: {
+        cutoff: (v) => { [lp, hp, bp, notch].forEach((f) => f.frequency.rampTo(v, 0.02)); },
+        resonance: (v) => { [lp, hp, bp, notch].forEach((f) => f.Q.rampTo(v, 0.02)); },
+        drive: () => {},
+      },
+      dispose: () => { [input, lp, hp, bp, notch].forEach((n) => n.dispose()); },
+    };
+  }
+  const filt = new Tone.Filter({
+    frequency: params.cutoff ?? 1000,
+    Q: params.resonance ?? 1,
+    type: kinds[Math.round(params.type ?? 0)] || 'lowpass',
+    rolloff,
+  });
+  return {
+    nodes: { audio_in: filt, audio_out: filt, lp: filt, hp: filt, bp: filt, notch: filt, cutoff_cv: filt.frequency, res_cv: filt.Q, vowel_cv: filt.frequency },
+    setters: {
+      cutoff: (v) => filt.frequency.rampTo(v, 0.02),
+      resonance: (v) => filt.Q.rampTo(v, 0.02),
+      type: (v) => { filt.type = kinds[Math.round(v)] || 'lowpass'; },
+      drive: () => {}, compensation: () => {}, mode: () => {},
+    },
+    dispose: () => filt.dispose(),
+  };
+}
+
+function makeFormantFilter(params) {
+  // Three parallel band-pass filters approximating /a/, /e/, /i/ etc.
+  const VOWELS = [
+    [730, 1090, 2440], // /a/
+    [530, 1840, 2480], // /e/
+    [270, 2290, 3010], // /i/
+    [570, 840, 2410],  // /o/
+    [300, 870, 2240],  // /u/
+  ];
+  const idx = () => {
+    const vw = Math.max(0, Math.min(1, params.vowel ?? 0));
+    return Math.min(VOWELS.length - 1, Math.floor(vw * (VOWELS.length - 1)));
+  };
+  const initial = VOWELS[idx()];
+  const filters = initial.map((f) => new Tone.Filter({ type: 'bandpass', frequency: f, Q: params.resonance ?? 5 }));
+  const input = new Tone.Gain(1);
+  const output = new Tone.Gain(1);
+  filters.forEach((f) => { input.connect(f); f.connect(output); });
+  return {
+    nodes: { audio_in: input, audio_out: output, vowel_cv: filters[0].frequency },
+    setters: {
+      vowel: (v) => {
+        const i = Math.min(VOWELS.length - 1, Math.floor(Math.max(0, Math.min(1, v)) * (VOWELS.length - 1)));
+        VOWELS[i].forEach((f, k) => filters[k].frequency.rampTo(f, 0.05));
+      },
+      resonance: (v) => filters.forEach((f) => f.Q.rampTo(v, 0.05)),
+      shift: () => {},
+    },
+    dispose: () => { filters.forEach((f) => f.dispose()); input.dispose(); output.dispose(); },
+  };
+}
+
+function makeCombFilter(params) {
+  const f = new Tone.FeedbackCombFilter(1 / Math.max(20, params.frequency ?? 220), params.feedback ?? 0.5);
+  return {
+    nodes: { audio_in: f, audio_out: f, pitch_cv: f.delayTime },
+    setters: {
+      frequency: (v) => f.delayTime.rampTo(1 / Math.max(20, v), 0.05),
+      feedback: (v) => f.resonance.rampTo(v, 0.05),
+      damping: () => {}, mode: () => {},
+    },
+    dispose: () => f.dispose(),
+  };
+}
+
+function makeMixer(params, layerId) {
+  const bus = ensureLayerBus(layerId)?.bus;
+  const channels = Array.from({ length: 8 }, (_, i) => new Tone.Gain(params[`level_${i + 1}`] ?? 0.4));
+  if (bus) channels.forEach((g) => g.connect(bus));
+  const nodes = { audio_out: bus || new Tone.Gain(1) };
+  channels.forEach((g, i) => { nodes[`in_${i + 1}`] = g; });
+  const setters = {};
+  channels.forEach((g, i) => { setters[`level_${i + 1}`] = (v) => g.gain.rampTo(v, 0.02); });
+  return { nodes, setters, dispose: () => channels.forEach((g) => g.dispose()) };
+}
+
+function makeCvMixer(params) {
+  const channels = Array.from({ length: 4 }, (_, i) => new Tone.Gain(params[`amount_${i + 1}`] ?? 0.5));
+  const sum = new Tone.Gain(1);
+  channels.forEach((g) => g.connect(sum));
+  const nodes = { cv_out: sum };
+  channels.forEach((g, i) => { nodes[`cv_${i + 1}`] = g; });
+  const setters = {};
+  channels.forEach((g, i) => { setters[`amount_${i + 1}`] = (v) => g.gain.rampTo(v, 0.02); });
+  return { nodes, setters, dispose: () => { channels.forEach((g) => g.dispose()); sum.dispose(); } };
+}
+
+function makeNoise(params) {
+  const types = ['white', 'pink', 'brown', 'white', 'white'];
+  const n = new Tone.Noise(types[Math.round(params.mode ?? 0)] || 'white').start();
+  const amp = new Tone.Gain(0.4);
+  n.connect(amp);
+  return {
+    nodes: { audio_out: amp, cv_out: amp },
+    setters: {
+      mode: (v) => { n.type = types[Math.round(v)] || 'white'; },
+      rate: () => {}, range_lo: () => {}, range_hi: () => {},
+    },
+    dispose: () => { n.stop(); n.dispose(); amp.dispose(); },
+  };
+}
+
+function makeDelay(params) {
+  const d = new Tone.FeedbackDelay({
+    delayTime: (params.time ?? 250) / 1000,
+    feedback: params.feedback ?? 0.3,
+    wet: params.mix ?? 0.5,
+  });
+  return {
+    nodes: { audio_in: d, audio_out: d, time_cv: d.delayTime, feedback_cv: d.feedback },
+    setters: {
+      time: (v) => d.delayTime.rampTo(v / 1000, 0.05),
+      feedback: (v) => d.feedback.rampTo(v, 0.05),
+      mix: (v) => d.wet.rampTo(v, 0.05),
+      filter: () => {},
+    },
+    dispose: () => d.dispose(),
+  };
+}
+
+function makeReverb(params) {
+  const r = new Tone.Reverb({ decay: Math.max(0.1, params.decay ?? 0.7) * 4, preDelay: (params.pre_delay ?? 10) / 1000, wet: params.mix ?? 0.3 });
+  return {
+    nodes: { audio_in: r, audio_out: r },
+    setters: {
+      decay: (v) => { r.decay = Math.max(0.1, v) * 4; },
+      pre_delay: (v) => { r.preDelay = v / 1000; },
+      mix: (v) => r.wet.rampTo(v, 0.05),
+      damping: () => {}, size: () => {},
+    },
+    dispose: () => r.dispose(),
+  };
+}
+
+function makeChorus(params) {
+  const c = new Tone.Chorus({ frequency: params.rate ?? 1.5, depth: (params.depth ?? 5) / 20, feedback: params.feedback ?? 0, wet: params.mix ?? 0.5 }).start();
+  return {
+    nodes: { audio_in: c, audio_out: c },
+    setters: {
+      rate: (v) => { c.frequency.rampTo(v, 0.05); },
+      depth: (v) => { c.depth = v / 20; },
+      feedback: (v) => c.feedback.rampTo(v, 0.05),
+      mix: (v) => c.wet.rampTo(v, 0.05),
+      voices: () => {},
+    },
+    dispose: () => c.dispose(),
+  };
+}
+
+function makePhaser(params) {
+  const p = new Tone.Phaser({ frequency: params.rate ?? 0.5, octaves: 3, baseFrequency: params.center ?? 1000, wet: params.mix ?? 0.5 });
+  return {
+    nodes: { audio_in: p, audio_out: p },
+    setters: {
+      rate: (v) => { p.frequency.rampTo(v, 0.05); },
+      depth: () => {}, stages: () => {}, feedback: () => {},
+      center: (v) => { p.baseFrequency = v; },
+      mix: (v) => p.wet.rampTo(v, 0.05),
+    },
+    dispose: () => p.dispose(),
+  };
+}
+
+function makeFlanger(params) {
+  // Tone has no Flanger; build with FeedbackDelay + LFO.
+  const d = new Tone.FeedbackDelay({ delayTime: 0.005, feedback: params.feedback ?? 0.7, wet: params.mix ?? 0.5 });
+  const lfo = new Tone.LFO(params.rate ?? 0.3, 0.001, 0.001 + (params.depth ?? 3) / 1000).start();
+  lfo.connect(d.delayTime);
+  return {
+    nodes: { audio_in: d, audio_out: d },
+    setters: {
+      rate: (v) => lfo.frequency.rampTo(v, 0.05),
+      depth: (v) => { lfo.max = 0.001 + v / 1000; },
+      feedback: (v) => d.feedback.rampTo(v, 0.05),
+      mix: (v) => d.wet.rampTo(v, 0.05),
+    },
+    dispose: () => { lfo.stop(); lfo.dispose(); d.dispose(); },
+  };
+}
+
+function makeBitcrusher(params) {
+  const b = new Tone.BitCrusher(Math.max(1, Math.round(params.bit_depth ?? 8)));
+  b.wet.value = params.mix ?? 1;
+  return {
+    nodes: { audio_in: b, audio_out: b },
+    setters: {
+      bit_depth: (v) => { b.bits.value = Math.max(1, Math.round(v)); },
+      mix: (v) => b.wet.rampTo(v, 0.02),
+      downsample: () => {},
+    },
+    dispose: () => b.dispose(),
+  };
+}
+
+function makePan(params) {
+  const p = new Tone.Panner(params.pan ?? 0);
+  return {
+    nodes: { audio_in: p, audio_out: p, out_l: p, out_r: p, pan_cv: p.pan },
+    setters: { pan: (v) => p.pan.rampTo(v, 0.02) },
+    dispose: () => p.dispose(),
+  };
+}
+
+function makeCompressor(params) {
+  const c = new Tone.Compressor({
+    threshold: params.threshold ?? -12,
+    ratio: params.ratio ?? 4,
+    attack: (params.attack ?? 5) / 1000,
+    release: (params.release ?? 100) / 1000,
+    knee: params.knee ?? 6,
+  });
+  return {
+    nodes: { audio_in: c, audio_out: c, sidechain: c },
+    setters: {
+      threshold: (v) => c.threshold.rampTo(v, 0.05),
+      ratio: (v) => c.ratio.rampTo(v, 0.05),
+      attack: (v) => c.attack.rampTo(v / 1000, 0.05),
+      release: (v) => c.release.rampTo(v / 1000, 0.05),
+      makeup: () => {}, knee: (v) => c.knee.rampTo(v, 0.05),
+    },
+    dispose: () => c.dispose(),
+  };
+}
+
+function makeSaturation(params) {
+  const s = new Tone.Distortion({ distortion: Math.min(1, (params.drive ?? 1) / 5), wet: 1 });
+  return {
+    nodes: { audio_in: s, audio_out: s },
+    setters: {
+      drive: (v) => { s.distortion = Math.min(1, v / 5); },
+      bias: () => {}, tone: () => {}, wow_flutter: () => {},
+    },
+    dispose: () => s.dispose(),
+  };
+}
+
+function makeWavefolder(params) {
+  const stages = Math.max(1, Math.round(params.stages ?? 3));
+  const curve = (x) => {
+    let y = x * (params.drive ?? 1);
+    for (let i = 0; i < stages; i++) y = Math.sin(y);
+    return y * (params.mix ?? 1);
+  };
+  const s = new Tone.WaveShaper(curve);
+  return {
+    nodes: { audio_in: s, audio_out: s, drive_cv: null },
+    setters: {
+      drive: (v) => { params.drive = v; s.setMap(curve); },
+      stages: () => {}, symmetry: () => {}, mix: () => { s.setMap(curve); },
+    },
+    dispose: () => s.dispose(),
+  };
+}
+
+function makeRingMod(params) {
+  // carrier × modulator using a Tone.Gain whose gain AudioParam is driven by the modulator.
+  const out = new Tone.Gain(1);
+  return {
+    nodes: { carrier: out, modulator: out.gain, audio_out: out },
+    setters: { mix: () => {}, mode: () => {} },
+    dispose: () => out.dispose(),
+  };
+}
+
+// CV utilities — mostly identity but with proper port mapping so cables route.
+function makePass(params, type) {
+  const g = new Tone.Gain(1);
+  const ports = getPortDefs(type);
+  const nodes = {};
+  for (const p of ports.inputs) nodes[p] = g;
+  for (const p of ports.outputs) nodes[p] = g;
+  return { nodes, setters: {}, dispose: () => g.dispose() };
+}
+
+// ── Drum + bass instruments ───────────────────────────────────
+function makeKick(params) {
+  const synth = new Tone.MembraneSynth({
+    pitchDecay: (params.pitch_tau ?? 18) / 1000,
+    octaves: params.pitch_end ?? 6,
+    envelope: { attack: 0.001, decay: (params.decay ?? 520) / 1000, sustain: 0, release: 0.05 },
+  });
+  const drive = new Tone.Distortion({ distortion: Math.min(1, (params.drive ?? 2) / 5), wet: 0.4 });
+  const out = new Tone.Gain(params.level ?? 0.9);
+  synth.connect(drive); drive.connect(out);
+  return {
+    nodes: { audio_out: out, audio: out },
+    triggers: {
+      gate: (time, vel) => {
+        const pitch = (params.tune ?? 60);
+        synth.triggerAttackRelease(pitch, (params.decay ?? 520) / 1000, time, vel ?? 1);
+      },
+      pitch_cv: () => {}, tune_cv: () => {}, decay_cv: () => {}, punch_cv: () => {}, sub_cv: () => {}, drive_cv: () => {},
+    },
+    setters: {
+      tune: (v) => { params.tune = v; },
+      pitch_tau: (v) => { synth.pitchDecay = v / 1000; },
+      pitch_end: (v) => { synth.octaves = v; },
+      decay: (v) => { synth.envelope.decay = v / 1000; params.decay = v; },
+      drive: (v) => { drive.distortion = Math.min(1, v / 5); },
+      level: (v) => out.gain.rampTo(v, 0.05),
+      punch: () => {}, sub: () => {}, sub_decay: () => {}, click: () => {}, click_tone: () => {}, body_attack: () => {}, body_mix: () => {},
+    },
+    dispose: () => { synth.dispose(); drive.dispose(); out.dispose(); },
+  };
+}
+
+function makeSnare(params) {
+  const noise = new Tone.NoiseSynth({
+    noise: { type: 'white' },
+    envelope: { attack: 0.001, decay: params.decay ?? 0.16, sustain: 0 },
+  });
+  const tone = new Tone.MembraneSynth({ pitchDecay: (params.pitch_tau ?? 8) / 1000, octaves: 2 });
+  const hpf = new Tone.Filter({ type: 'highpass', frequency: params.hpf ?? 1500 });
+  const out = new Tone.Gain(params.level ?? 0.85);
+  noise.connect(hpf); hpf.connect(out); tone.connect(out);
+  return {
+    nodes: { audio_out: out, audio: out },
+    triggers: {
+      gate: (time, vel) => {
+        noise.triggerAttackRelease(params.decay ?? 0.16, time, vel ?? 1);
+        tone.triggerAttackRelease(params.tone ?? 180, 0.05, time, (vel ?? 1) * (params.body_mix ?? 0.45));
+      },
+    },
+    setters: {
+      tone: (v) => { params.tone = v; },
+      decay: (v) => { params.decay = v; noise.envelope.decay = v; },
+      hpf: (v) => hpf.frequency.rampTo(v, 0.05),
+      level: (v) => out.gain.rampTo(v, 0.05),
+      noise: () => {}, snap: () => {}, body_mix: () => {}, drive: () => {}, lpf: () => {}, tone_ratio: () => {}, t2_freq: () => {}, pitch_tau: () => {},
+    },
+    dispose: () => { noise.dispose(); tone.dispose(); hpf.dispose(); out.dispose(); },
+  };
+}
+
+function makeHihat(params) {
+  const metal = new Tone.MetalSynth({
+    envelope: { attack: 0.001, decay: params.decay ?? 0.055, release: 0.01 },
+    harmonicity: 5.1,
+    modulationIndex: 32,
+    resonance: 4000,
+    octaves: 1.5,
+  });
+  const out = new Tone.Gain(params.level ?? 0.7);
+  metal.connect(out);
+  return {
+    nodes: { audio_out: out, audio: out },
+    triggers: {
+      gate: (time, vel) => {
+        metal.envelope.decay = params.open ? Math.max(0.1, params.decay ?? 0.055) * 4 : (params.decay ?? 0.055);
+        metal.triggerAttackRelease(params.tone ?? 6000, 0.05, time, vel ?? 1);
+      },
+    },
+    setters: {
+      tone: (v) => { params.tone = v; },
+      decay: (v) => { params.decay = v; },
+      open: (v) => { params.open = v; },
+      level: (v) => out.gain.rampTo(v, 0.05),
+      bp_freq: () => {}, edge: () => {}, noise: () => {}, drive: () => {}, choke: () => {}, tune: () => {},
+    },
+    dispose: () => { metal.dispose(); out.dispose(); },
+  };
+}
+
+function makeBassLine(params) {
+  const synth = new Tone.MonoSynth({
+    oscillator: { type: 'sawtooth' },
+    filter: { Q: params.resonance ?? 4 },
+    envelope: { attack: 0.005, decay: params.decay ?? 0.2, sustain: 0.2, release: 0.1 },
+    filterEnvelope: { attack: 0.005, decay: params.decay ?? 0.2, sustain: 0.1, release: 0.1, baseFrequency: params.cutoff ?? 400, octaves: 2.5 },
+  });
+  const out = new Tone.Gain(params.level ?? 0.7);
+  synth.connect(out);
+  return {
+    nodes: { audio_out: out, gate_cv: null, pitch_cv: null },
+    triggers: {
+      gate_cv: (time, vel, pitch) => {
+        const f = pitch ?? params.freq ?? 55;
+        synth.triggerAttackRelease(f, '8n', time, vel ?? 1);
+      },
+      gate: (time, vel, pitch) => {
+        const f = pitch ?? params.freq ?? 55;
+        synth.triggerAttackRelease(f, '8n', time, vel ?? 1);
+      },
+    },
+    setters: {
+      freq: (v) => { params.freq = v; },
+      cutoff: (v) => { synth.filterEnvelope.baseFrequency = v; },
+      resonance: (v) => { synth.filter.Q.value = v; },
+      decay: (v) => { synth.envelope.decay = v; synth.filterEnvelope.decay = v; },
+      level: (v) => out.gain.rampTo(v, 0.05),
+      bpm: () => {},
+    },
+    dispose: () => { synth.dispose(); out.dispose(); },
+  };
+}
+
+// ── Timing / gate sources ─────────────────────────────────────
+function semitoneToFreq(s) { return 440 * Math.pow(2, (s - 69) / 12); }
+
+function makeClock(params, modId) {
+  const emitGate = makeEmitter();
+  const emitRamp = makeEmitter();
+  // Schedule via Tone.Transport; division=4 → quarter notes by default.
+  // scheduleRepeat requires a static interval; we lock it to 16th notes.
+  const ev = Tone.getTransport().scheduleRepeat((time) => {
+    emitGate.emit(time, 1);
+    emitRamp.emit(time, 1);
+  }, '16n');
+  const dummy = new Tone.Gain(0);
+  return {
+    nodes: { gate: dummy, ramp: dummy },
+    emits: { gate: emitGate, ramp: emitRamp },
+    setters: {
+      bpm: (v) => { try { Tone.getTransport().bpm.rampTo(v, 0.05); } catch {} },
+      division: () => {},
+      pulse_width: () => {},
+    },
+    dispose: () => { Tone.getTransport().clear(ev); dummy.dispose(); },
+  };
+}
+
+function makeClockDivider(params) {
+  const emitDiv = makeEmitter();
+  const emitMult = makeEmitter();
+  let count = 0;
+  return {
+    nodes: { div_out: new Tone.Gain(0), mult_out: new Tone.Gain(0) },
+    triggers: {
+      clock: (time) => {
+        count++;
+        if (count % Math.max(1, Math.round(params.divide ?? 2)) === 0) emitDiv.emit(time, 1);
+        for (let i = 0; i < Math.max(1, Math.round(params.multiply ?? 1)); i++) emitMult.emit(time + i * 0.01, 1);
+      },
+      reset: () => { count = 0; },
+    },
+    emits: { div_out: emitDiv, mult_out: emitMult },
+    setters: { divide: () => {}, multiply: () => {}, reset_count: () => {} },
+    dispose: () => {},
+  };
+}
+
+function makeBernoulliGate(params) {
+  const a = makeEmitter();
+  const b = makeEmitter();
+  return {
+    nodes: { gate_in: new Tone.Gain(0), out_a: new Tone.Gain(0), out_b: new Tone.Gain(0), cv_in: new Tone.Gain(0) },
+    triggers: {
+      gate_in: (time, vel) => { if (Math.random() < (params.probability ?? 0.5)) a.emit(time, vel); else b.emit(time, vel); },
+    },
+    emits: { out_a: a, out_b: b },
+    setters: { probability: () => {}, mode: () => {} },
+    dispose: () => {},
+  };
+}
+
+function makeEuclidean(params) {
+  const gateE = makeEmitter();
+  const accE = makeEmitter();
+  let step = 0;
+  function pattern() {
+    const s = Math.max(1, Math.round(params.steps ?? 16));
+    const p = Math.min(s, Math.max(0, Math.round(params.pulses ?? 4)));
+    const r = Math.round(params.rotation ?? 0);
+    const out = new Array(s).fill(false);
+    for (let i = 0; i < p; i++) out[Math.floor((i * s) / p + r) % s] = true;
+    return out;
+  }
+  return {
+    nodes: { clock: new Tone.Gain(0), reset: new Tone.Gain(0), gate: new Tone.Gain(0), accent: new Tone.Gain(0) },
+    triggers: {
+      clock: (time) => {
+        const pat = pattern();
+        if (pat[step]) gateE.emit(time, 1);
+        if (Math.random() < (params.probability ?? 1)) accE.emit(time, 1);
+        step = (step + 1) % pat.length;
+      },
+      reset: () => { step = 0; },
+    },
+    emits: { gate: gateE, accent: accE },
+    setters: { steps: () => {}, pulses: () => {}, rotation: () => {}, probability: () => {} },
+    dispose: () => {},
+  };
+}
+
+function makeArpeggiator(params) {
+  // Pass-through: emits an arpeggiated pitch sequence when receiving a gate
+  const pitchE = makeEmitter();
+  const gateE = makeEmitter();
+  let cur = 0;
+  const intervals = [0, 4, 7, 12]; // major7
+  return {
+    nodes: { pitch_cv: new Tone.Gain(0), gate: new Tone.Gain(0), pitch_out: new Tone.Gain(0), gate_out: new Tone.Gain(0) },
+    triggers: {
+      gate: (time, vel, pitch) => {
+        const p = (pitch ?? 60) + intervals[cur % intervals.length];
+        cur++;
+        pitchE.emit(time, vel, p);
+        gateE.emit(time, vel, p);
+      },
+    },
+    emits: { pitch_out: pitchE, gate_out: gateE },
+    setters: { mode: () => {}, octaves: () => {}, gate_length: () => {}, division: () => {} },
+    dispose: () => {},
+  };
+}
+
+function makeSequencer(params, modId, isGlobal) {
+  const stepCount = Math.max(1, Math.min(64, Math.round(params.length ?? 16)));
+  const steps = Array.from({ length: stepCount }, (_, i) => ({
+    gate: false, pitch: 60 + (i % 12), velocity: 1, plocks: {},
+  }));
+  seqState.set(modId, { steps, clockListeners: new Set() });
+  const emitGate = makeEmitter();
+  const emitPitch = makeEmitter();
+  const emitVel = makeEmitter();
+  const emitAccent = makeEmitter();
+  let cursor = 0;
+  const ev = Tone.getTransport().scheduleRepeat((time) => {
+    const st = seqState.get(modId);
+    if (!st) return;
+    const idx = cursor % st.steps.length;
+    const step = st.steps[idx];
+    cursor++;
+    // Broadcast step index to listeners (SeqGrid clock socket subscribers)
+    for (const fn of st.clockListeners) try { fn(idx); } catch {}
+    if (step?.gate) {
+      const pitch = semitoneToFreq(step.pitch ?? 60);
+      emitPitch.emit(time, step.velocity ?? 1, pitch);
+      emitVel.emit(time, step.velocity ?? 1);
+      emitGate.emit(time, step.velocity ?? 1, pitch);
+      if (isGlobal && (step.velocity ?? 1) > 0.85) emitAccent.emit(time, step.velocity ?? 1, pitch);
+    }
+  }, '16n');
+  const out = {
+    nodes: { gate: new Tone.Gain(0), pitch_cv: new Tone.Gain(0), velocity_cv: new Tone.Gain(0), accent: new Tone.Gain(0), reset: new Tone.Gain(0) },
+    emits: { gate: emitGate, pitch_cv: emitPitch, velocity_cv: emitVel, accent: emitAccent },
+    triggers: { reset: () => { cursor = 0; } },
+    setters: {
+      bpm: (v) => { try { Tone.getTransport().bpm.rampTo(v, 0.05); } catch {} },
+      length: () => {}, division: () => {}, swing: () => {}, direction: () => {},
+    },
+    dispose: () => { Tone.getTransport().clear(ev); seqState.delete(modId); },
+  };
+  return out;
+}
+
+// CV utilities — wired with the right ports, mostly identity behavior
+function makeSlewLimiter(params) {
+  const g = new Tone.Gain(1);
+  return {
+    nodes: { cv_in: g, cv_out: g },
+    setters: { rise: () => {}, fall: () => {}, shape: () => {} },
+    dispose: () => g.dispose(),
+  };
+}
+function makeSampleHold(params) {
+  const g = new Tone.Gain(1);
+  return {
+    nodes: { cv_in: g, gate: new Tone.Gain(0), cv_out: g },
+    setters: {},
+    dispose: () => g.dispose(),
+  };
+}
+function makeAttenuverter(params) {
+  const g = new Tone.Gain(params.amount ?? 1);
+  return {
+    nodes: { cv_in: g, cv_out: g },
+    setters: { amount: (v) => g.gain.rampTo(v, 0.02), offset: () => {} },
+    dispose: () => g.dispose(),
+  };
+}
+function makePitchQuantizer(params) {
+  const g = new Tone.Gain(1);
+  return {
+    nodes: { cv_in: g, cv_out: g },
+    setters: { root: () => {}, scale: () => {}, glide: () => {} },
+    dispose: () => g.dispose(),
+  };
+}
+function makeEnvelopeFollower(params) {
+  // tone Follower converts audio to envelope CV
+  try {
+    const f = new Tone.Follower((params.attack ?? 5) / 1000);
+    return {
+      nodes: { audio_in: f, cv_out: f },
+      setters: {
+        attack: (v) => { try { f.smoothing = v / 1000; } catch {} },
+        release: () => {}, gain: () => {},
+      },
+      dispose: () => f.dispose(),
+    };
+  } catch {
+    return makePass(params, 'envelope_follower');
+  }
+}
+
+const FACTORIES = {
+  oscillator: (p) => makeOscillator(p, 'oscillator'),
+  pwm_oscillator: (p) => makeOscillator(p, 'pwm_oscillator'),
+  fm_operator: makeFm,
+  supersaw: makeSupersaw,
+  wavetable: makeWavetable,
+  additive_osc: makeAdditive,
+  phase_distortion: makePhaseDistortion,
+  noise_gen: makeNoise,
+  lfo: makeLfo,
+  adsr: makeAdsr,
+  envelope_follower: makeEnvelopeFollower,
+  slew_limiter: makeSlewLimiter,
+  sample_hold: makeSampleHold,
+  attenuverter: makeAttenuverter,
+  pitch_quantizer: makePitchQuantizer,
+  filter: (p) => makeFilter(p, 'filter'),
+  moog_filter: (p) => makeFilter(p, 'moog_filter'),
+  svf: (p) => makeFilter(p, 'svf'),
+  ms20_filter: (p) => makeFilter(p, 'ms20_filter'),
+  formant_filter: makeFormantFilter,
+  comb_filter: makeCombFilter,
+  wavefolder: makeWavefolder,
+  ring_mod: makeRingMod,
+  bitcrusher: makeBitcrusher,
+  tape_saturation: makeSaturation,
+  vca: makeVca,
+  compressor: makeCompressor,
+  stereo_panner: makePan,
+  delay_line: makeDelay,
+  reverb: makeReverb,
+  chorus: makeChorus,
+  phaser: makePhaser,
+  flanger: makeFlanger,
+  cv_mixer: makeCvMixer,
+  clock: makeClock,
+  clock_divider: makeClockDivider,
+  euclidean: makeEuclidean,
+  arpeggiator: makeArpeggiator,
+  bernoulli_gate: makeBernoulliGate,
+  kick_drum: makeKick,
+  snare: makeSnare,
+  hihat: makeHihat,
+  bass_line: makeBassLine,
+};
+
+function realizeModule(layerId, modId) {
+  if (!audioReady || nodeMap.has(modId)) return;
+  ensureLayerBus(layerId);
+  const mod = session.layers?.[layerId]?.modules?.[modId];
+  if (!mod) return;
+  const type = mod.type_name;
+  let inst;
+  if (type === 'mixer') inst = makeMixer(mod.params || {}, layerId);
+  else if (type === 'sequencer') inst = makeSequencer(mod.params || {}, modId, false);
+  else if (type === 'global_seq') inst = makeSequencer(mod.params || {}, modId, true);
+  else if (type === 'clock') inst = makeClock(mod.params || {}, modId);
+  else if (FACTORIES[type]) inst = FACTORIES[type](mod.params || {});
+  else inst = makePass(mod.params || {}, type);
+  nodeMap.set(modId, inst);
+}
+
+function realizeConnection(layerId, conn) {
+  if (!audioReady || connMap.has(conn.id)) return;
+  const src = nodeMap.get(conn.from_module);
+  const dst = nodeMap.get(conn.to_module);
+  if (!src || !dst) return;
+  // Gate / event connection — src emits, dst triggers
+  if (src.emits?.[conn.from_port] && dst.triggers?.[conn.to_port]) {
+    const unsub = src.emits[conn.from_port].subscribe((time, vel, pitch) => {
+      dst.triggers[conn.to_port](time, vel, pitch);
+    });
+    connMap.set(conn.id, unsub);
+    return;
+  }
+  // Audio / CV connection — src node connects to dst node-or-param
+  const srcNode = src.nodes?.[conn.from_port];
+  const dstNode = dst.nodes?.[conn.to_port];
+  if (!srcNode || !dstNode || !srcNode.connect) return;
+  try {
+    srcNode.connect(dstNode);
+    connMap.set(conn.id, () => { try { srcNode.disconnect(dstNode); } catch {} });
+  } catch (e) {
+    pushLog('err', `connect ${conn.from_port}->${conn.to_port}: ${e.message}`);
+  }
+}
+
+function unrealizeConnection(connId) {
+  const d = connMap.get(connId);
+  if (typeof d === 'function') d();
+  connMap.delete(connId);
+}
+
+function unrealizeModule(modId) {
+  const inst = nodeMap.get(modId);
+  if (!inst) return;
+  try { inst.dispose?.(); } catch {}
+  nodeMap.delete(modId);
+}
+
+// ── Store mutations ───────────────────────────────────────────
+function createLayer({ name } = {}) {
+  const id = newId('layer');
+  const mixerId = newId('mod');
+  const mixerParams = {};
+  for (const [k, [, , def]] of Object.entries(getParamDefs('mixer'))) mixerParams[k] = def;
+  const layer = {
+    id,
+    name: name || `layer ${Object.keys(session.layers || {}).length + 1}`,
+    mixer_id: mixerId,
+    modules: { [mixerId]: { id: mixerId, name: 'mixer', type_name: 'mixer', params: mixerParams, seq: 0 } },
+    connections: [],
+  };
+  setSession('layers', id, layer);
+  ensureLayerBus(id);
+  realizeModule(id, mixerId);
+  return layer;
+}
+
+function addModule(layerId, { type, name } = {}) {
+  const layer = session.layers?.[layerId];
+  if (!layer) return { error: 'no such layer' };
+  const id = newId('mod');
+  const params = {};
+  for (const [k, [, , def]] of Object.entries(getParamDefs(type) || {})) params[k] = def;
+  const existing = Object.values(layer.modules || {});
+  const seq = (existing.reduce((m, x) => Math.max(m, x.seq ?? 0), 0)) + 1;
+  const mod = { id, type_name: type, name: name || `${type}_${seq}`, params, seq };
+  setSession('layers', layerId, 'modules', id, mod);
+  realizeModule(layerId, id);
+  return mod;
+}
+
+function removeModule(layerId, modId) {
+  const conns = (session.layers?.[layerId]?.connections || []).filter(
+    (c) => c.from_module === modId || c.to_module === modId,
+  );
+  for (const c of conns) removeConnection(layerId, c.id);
+  unrealizeModule(modId);
+  setSession('layers', layerId, 'modules', modId, undefined);
+  return { ok: true };
+}
+
+function addConnection(layerId, { from_module, from_port, to_module, to_port }) {
+  const id = newId('conn');
+  const conn = { id, from_module, from_port, to_module, to_port };
+  const list = session.layers?.[layerId]?.connections || [];
+  setSession('layers', layerId, 'connections', [...list, conn]);
+  realizeConnection(layerId, conn);
+  return conn;
+}
+
+function removeConnection(layerId, connId) {
+  unrealizeConnection(connId);
+  const list = (session.layers?.[layerId]?.connections || []).filter((c) => c.id !== connId);
+  setSession('layers', layerId, 'connections', list);
+  return { ok: true };
+}
+
+function setParam(layerId, modId, name, value) {
+  setSession('layers', layerId, 'modules', modId, 'params', name, value);
+  const inst = nodeMap.get(modId);
+  if (inst?.setters?.[name]) {
+    try { inst.setters[name](value); } catch (e) { pushLog('err', `setParam ${name}: ${e.message}`); }
+  }
+}
+
+function renameLayer(layerId, name) { setSession('layers', layerId, 'name', name); }
+
+function deleteLayer(layerId) {
+  const layer = session.layers?.[layerId];
+  if (!layer) return;
+  for (const c of layer.connections || []) unrealizeConnection(c.id);
+  for (const mid of Object.keys(layer.modules || {})) unrealizeModule(mid);
+  const ref = layerBus.get(layerId);
+  if (ref) { try { ref.bus.dispose(); ref.meter.dispose(); } catch {}; layerBus.delete(layerId); }
+  setSession('layers', layerId, undefined);
+}
+
+function reorderLayer(layerId, order) {
+  order.forEach((id, i) => setSession('layers', layerId, 'modules', id, 'seq', i));
+}
+
+// ── Sequencer step state ──────────────────────────────────────
+function getSeqSteps(modId) {
+  const st = seqState.get(modId);
+  return st ? st.steps : [];
+}
+
+function putSeqStep(modId, n, fields) {
+  const st = seqState.get(modId);
+  if (!st) return;
+  st.steps[n] = { ...(st.steps[n] || { gate: false, pitch: 60, velocity: 1, plocks: {} }), ...fields };
+}
+
+function putPlock(modId, n, targetId, param, value) {
+  const st = seqState.get(modId);
+  if (!st) return;
+  const step = st.steps[n] ||= { gate: false, pitch: 60, velocity: 1, plocks: {} };
+  step.plocks ||= {};
+  step.plocks[targetId] ||= {};
+  step.plocks[targetId][param] = value;
+}
+
+function deletePlock(modId, n, targetId, param) {
+  const st = seqState.get(modId);
+  if (!st) return;
+  const step = st.steps[n];
+  if (!step?.plocks?.[targetId]) return;
+  delete step.plocks[targetId][param];
+}
+
+// ── Fetch proxy ───────────────────────────────────────────────
+const okJson = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+const errJson = (status, error) => new Response(JSON.stringify({ error }), { status, headers: { 'Content-Type': 'application/json' } });
+const realFetch = typeof fetch === 'function' ? fetch.bind(window) : null;
+
+function matches(url, pattern) {
+  const u = new URL(url, location.origin);
+  const p = u.pathname.split('/').filter(Boolean);
+  const q = pattern.split('/').filter(Boolean);
+  if (p.length !== q.length) return null;
+  const params = {};
+  for (let i = 0; i < p.length; i++) {
+    if (q[i].startsWith(':')) params[q[i].slice(1)] = decodeURIComponent(p[i]);
+    else if (q[i] !== p[i]) return null;
+  }
+  return params;
+}
+
+async function readJson(init) {
+  if (!init || !init.body) return {};
+  try { return JSON.parse(init.body); } catch { return {}; }
+}
+
+async function localHandler(input, init = {}) {
+  const url = typeof input === 'string' ? input : input.url;
+  const method = (init.method || 'GET').toUpperCase();
+  let m;
+
+  if (method === 'GET' && matches(url, '/session')) return okJson(JSON.parse(JSON.stringify(session)));
+  if (method === 'GET' && matches(url, '/modules')) return okJson(SUPPORTED_TYPES);
+  if (method === 'GET' && matches(url, '/wasm/modules')) return okJson({ types: [] });
+  if (method === 'GET' && matches(url, '/meters')) {
+    const out = {};
+    for (const [lid, ref] of layerBus.entries()) {
+      const layer = session.layers?.[lid];
+      if (!layer?.mixer_id) continue;
+      try {
+        const lv = ref.meter.getValue();
+        const a = Array.isArray(lv) ? lv : [lv, lv];
+        out[layer.mixer_id] = a.map((db) => Math.max(0, Math.min(1, (db + 60) / 60)));
+      } catch {}
+    }
+    return okJson(out);
+  }
+  if (method === 'GET' && matches(url, '/layers')) return okJson(Object.values(session.layers || {}).map((l) => ({ id: l.id, name: l.name })));
+  if ((m = matches(url, '/layer/:id')) && method === 'GET') {
+    const l = session.layers?.[m.id];
+    return l ? okJson(JSON.parse(JSON.stringify(l))) : errJson(404, 'no such layer');
+  }
+  if (matches(url, '/layer') && method === 'POST') return okJson(createLayer(await readJson(init)));
+  if ((m = matches(url, '/layer/:id')) && method === 'PATCH') {
+    const body = await readJson(init);
+    if (body.name) renameLayer(m.id, body.name);
+    return okJson({ ok: true });
+  }
+  if ((m = matches(url, '/layer/:id')) && method === 'DELETE') { deleteLayer(m.id); return okJson({ ok: true }); }
+  if ((m = matches(url, '/layer/:id/module')) && method === 'POST') {
+    const res = addModule(m.id, await readJson(init));
+    return res.error ? errJson(400, res.error) : okJson(res);
+  }
+  if ((m = matches(url, '/layer/:id/module/:mid')) && method === 'DELETE') return okJson(removeModule(m.id, m.mid));
+  if ((m = matches(url, '/layer/:id/module/:mid/param')) && method === 'PUT') {
+    const body = await readJson(init);
+    setParam(m.id, m.mid, body.name, body.value);
+    return okJson({ ok: true });
+  }
+  if ((m = matches(url, '/layer/:id/patch')) && method === 'POST') return okJson(addConnection(m.id, await readJson(init)));
+  if ((m = matches(url, '/layer/:id/patch/:cid')) && method === 'DELETE') return okJson(removeConnection(m.id, m.cid));
+  if ((m = matches(url, '/layer/:id/reorder')) && method === 'PUT') {
+    reorderLayer(m.id, (await readJson(init)).order || []);
+    return okJson({ ok: true });
+  }
+  // Sequencer endpoints
+  if ((m = matches(url, '/layer/:id/sequencer/:mid')) && method === 'GET') return okJson(getSeqSteps(m.mid));
+  if ((m = matches(url, '/layer/:id/sequencer/:mid/step/:n')) && method === 'PUT') {
+    putSeqStep(m.mid, Number(m.n), await readJson(init));
+    return okJson({ ok: true });
+  }
+  if ((m = matches(url, '/layer/:id/sequencer/:mid/step/:n/plock')) && method === 'POST') {
+    const body = await readJson(init);
+    putPlock(m.mid, Number(m.n), body.target_id, body.param, body.value);
+    return okJson({ ok: true });
+  }
+  if ((m = matches(url, '/layer/:id/sequencer/:mid/step/:n/plock')) && method === 'DELETE') {
+    const body = await readJson(init);
+    deletePlock(m.mid, Number(m.n), body.target_id, body.param);
+    return okJson({ ok: true });
+  }
+
+  // Fall back to real fetch
+  if (realFetch) return realFetch(input, init);
+  return errJson(404, 'no handler');
+}
+
+// ── Mock WebSocket — used by SeqGrid /seq/:mid/clock ──────────
+class FakeSocket {
+  constructor(url) {
+    this.url = url;
+    this.readyState = 1;
+    this.binaryType = 'arraybuffer';
+    this.onopen = null; this.onmessage = null; this.onclose = null; this.onerror = null;
+    this._installed = null;
+    queueMicrotask(() => this.onopen && this.onopen({}));
+    const m = url.match(/\/seq\/([^/]+)\/clock/);
+    if (m) {
+      const modId = m[1];
+      const listener = (step) => {
+        if (this.onmessage) {
+          const buf = new Uint8Array([step]).buffer;
+          this.onmessage({ data: buf });
+        }
+      };
+      const attach = () => {
+        const st = seqState.get(modId);
+        if (st) { st.clockListeners.add(listener); this._installed = { modId, listener }; return true; }
+        return false;
+      };
+      if (!attach()) {
+        const t = setInterval(() => { if (attach()) clearInterval(t); }, 200);
+      }
+    }
+  }
+  send() {}
+  close() {
+    this.readyState = 3;
+    if (this._installed) {
+      const st = seqState.get(this._installed.modId);
+      if (st) st.clockListeners.delete(this._installed.listener);
+    }
+    if (this.onclose) this.onclose({});
+  }
+}
+
+export function installEngineFetchProxy() {
+  if (typeof window === 'undefined') return;
+  window.fetch = (input, init) => localHandler(input, init);
+  const realWS = window.WebSocket;
+  window.WebSocket = function (url, ...args) {
+    if (typeof url === 'string' && url.startsWith('ws://0.0.0.0:0')) return new FakeSocket(url);
+    return new realWS(url, ...args);
+  };
+  window.WebSocket.CONNECTING = 0; window.WebSocket.OPEN = 1; window.WebSocket.CLOSING = 2; window.WebSocket.CLOSED = 3;
+}
+
+// ── ws.js compatibility surface ───────────────────────────────
+const paramTimers = {};
+export function scheduleParamPut(layerId, moduleId, paramName, value) {
+  const key = `${layerId}/${moduleId}/${paramName}`;
+  if (paramTimers[key]) clearTimeout(paramTimers[key]);
+  setParam(layerId, moduleId, paramName, value);
+  paramTimers[key] = setTimeout(() => { delete paramTimers[key]; }, 30);
+}
+
+export function sendOsc(address, args) {
+  pushLog('osc', `${address} ${JSON.stringify(args)}`);
+  if (address === '/transport/bpm') {
+    const v = args?.[0]?.value;
+    if (typeof v === 'number') { setSession('bpm', v); try { Tone.getTransport().bpm.rampTo(v, 0.05); } catch {} }
+  }
+  if (address === '/transport/play')  { setSession('playing', true);  try { Tone.getTransport().start(); } catch {} }
+  if (address === '/transport/stop')  { setSession('playing', false); try { Tone.getTransport().stop();  } catch {} }
+}
+
+export async function boot() {
+  installEngineFetchProxy();
+  setModuleTypes(SUPPORTED_TYPES);
+  setWasmTypes([]);
+  setWsConnected(true);
+  if (Object.keys(session.layers || {}).length === 0) createLayer({ name: 'main' });
+  pushLog('sys', 'local engine ready');
+  return true;
+}
+
+export const engine = {
+  ensureAudio, createLayer, addModule, removeModule, addConnection, removeConnection, setParam, deleteLayer,
+};

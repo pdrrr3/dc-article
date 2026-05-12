@@ -1,0 +1,1421 @@
+import { createSignal, createEffect, onMount, onCleanup, For, Show } from "https://esm.sh/solid-js@1.9.5";
+import { render } from "https://esm.sh/solid-js@1.9.5/web";
+import html from "https://esm.sh/solid-js@1.9.5/html";
+
+const MODULE_CATALOG = [
+  "oscillator",
+  "lfo",
+  "vca",
+  "filter",
+  "adsr",
+  "mixer",
+  "cv_mixer",
+  "attenuverter",
+  "sample_hold",
+  "clock",
+  "sequencer",
+  "scope",
+  "kick_drum",
+  "snare",
+  "hihat",
+  "bass_line",
+  "grain_player",
+  "ant_swarm",
+  "global_seq",
+  "ca_sequencer",
+  "chaos_lfo",
+  "kuramoto_lfo",
+  "pwm_oscillator",
+  "fm_operator",
+  "ring_mod",
+  "svf",
+  "moog_filter",
+  "wavefolder",
+  "delay_line",
+  "euclidean",
+  "slew_limiter",
+  "pitch_quantizer",
+  "supersaw",
+  "wavetable",
+  "comb_filter",
+  "chorus",
+  "reverb",
+  "bitcrusher",
+  "envelope_follower",
+  "clock_divider",
+  "bernoulli_gate",
+  "noise_gen",
+  "phaser",
+  "flanger",
+  "formant_filter",
+  "ms20_filter",
+  "tape_saturation",
+  "compressor",
+  "stereo_panner",
+  "additive_osc",
+  "phase_distortion",
+  "arpeggiator",
+  "lsystem_seq",
+  "frac_filter",
+  "hawkes_trigger",
+  "stoch_res",
+  "tonnetz_seq",
+  "soma_brain",
+  "rd_sequencer",
+  "spectral_freeze",
+];
+
+const MODULE_PORTS = {
+  oscillator: { inputs: ["pitch_cv"], outputs: ["audio_out"] },
+  lfo: { inputs: ["rate_cv", "sync"], outputs: ["cv_out"] },
+  vca: { inputs: ["audio_in", "level_cv"], outputs: ["audio_out"] },
+  filter: { inputs: ["audio_in", "cutoff_cv", "res_cv"], outputs: ["audio_out"] },
+  adsr: { inputs: ["gate"], outputs: ["cv_out"] },
+  mixer: { inputs: ["in_1", "in_2", "in_3", "in_4", "in_5", "in_6", "in_7", "in_8"], outputs: ["audio_out"] },
+  cv_mixer: { inputs: ["cv_1", "cv_2", "cv_3", "cv_4"], outputs: ["cv_out"] },
+  attenuverter: { inputs: ["cv_in"], outputs: ["cv_out"] },
+  sample_hold: { inputs: ["cv_in", "gate"], outputs: ["cv_out"] },
+  clock: { inputs: [], outputs: ["gate", "ramp"] },
+  sequencer: { inputs: [], outputs: ["gate", "pitch_cv", "velocity_cv"] },
+  global_seq: { inputs: ["reset"], outputs: ["gate", "pitch_cv", "velocity_cv", "accent"] },
+  scope: { inputs: ["audio_in", "cv_in"], outputs: ["sig_out"] },
+  kick_drum: { inputs: ["gate", "pitch_cv", "tune_cv", "decay_cv", "punch_cv", "sub_cv", "drive_cv"], outputs: ["audio_out"] },
+  snare: { inputs: ["gate", "pitch_cv", "decay_cv", "noise_cv", "snap_cv"], outputs: ["audio_out"] },
+  hihat: { inputs: ["gate", "decay_cv", "tone_cv", "edge_cv"], outputs: ["audio_out"] },
+  bass_line: { inputs: ["gate_cv", "pitch_cv"], outputs: ["audio_out"] },
+  pwm_oscillator: { inputs: ["pitch_cv", "pw_cv"], outputs: ["audio_out"] },
+  fm_operator: { inputs: ["pitch_cv", "mod_cv", "phase_mod"], outputs: ["audio_out"] },
+  ring_mod: { inputs: ["carrier", "modulator"], outputs: ["audio_out"] },
+  svf: { inputs: ["audio_in", "cutoff_cv", "res_cv"], outputs: ["lp", "hp", "bp", "notch"] },
+  moog_filter: { inputs: ["audio_in", "cutoff_cv", "res_cv"], outputs: ["audio_out"] },
+  wavefolder: { inputs: ["audio_in", "drive_cv"], outputs: ["audio_out"] },
+  delay_line: { inputs: ["audio_in", "time_cv", "feedback_cv"], outputs: ["audio_out"] },
+  euclidean: { inputs: ["clock", "reset"], outputs: ["gate", "accent"] },
+  slew_limiter: { inputs: ["cv_in"], outputs: ["cv_out"] },
+  pitch_quantizer: { inputs: ["cv_in"], outputs: ["cv_out"] },
+  supersaw: { inputs: ["pitch_cv"], outputs: ["out_l", "out_r"] },
+  wavetable: { inputs: ["pitch_cv", "position_cv"], outputs: ["audio_out"] },
+  comb_filter: { inputs: ["audio_in", "pitch_cv", "gate"], outputs: ["audio_out"] },
+  chorus: { inputs: ["audio_in"], outputs: ["audio_out"] },
+  reverb: { inputs: ["audio_in"], outputs: ["audio_out"] },
+  bitcrusher: { inputs: ["audio_in"], outputs: ["audio_out"] },
+  envelope_follower: { inputs: ["audio_in"], outputs: ["cv_out"] },
+  clock_divider: { inputs: ["clock", "reset"], outputs: ["div_out", "mult_out"] },
+  bernoulli_gate: { inputs: ["gate_in", "cv_in"], outputs: ["out_a", "out_b"] },
+  noise_gen: { inputs: [], outputs: ["audio_out", "cv_out"] },
+  phaser: { inputs: ["audio_in"], outputs: ["audio_out"] },
+  flanger: { inputs: ["audio_in"], outputs: ["audio_out"] },
+  formant_filter: { inputs: ["audio_in", "vowel_cv"], outputs: ["audio_out"] },
+  ms20_filter: { inputs: ["audio_in", "cutoff_cv", "res_cv"], outputs: ["audio_out"] },
+  tape_saturation: { inputs: ["audio_in"], outputs: ["audio_out"] },
+  compressor: { inputs: ["audio_in", "sidechain"], outputs: ["audio_out"] },
+  stereo_panner: { inputs: ["audio_in", "pan_cv"], outputs: ["out_l", "out_r"] },
+  additive_osc: { inputs: ["pitch_cv"], outputs: ["audio_out"] },
+  phase_distortion: { inputs: ["pitch_cv", "dist_cv"], outputs: ["audio_out"] },
+  arpeggiator: { inputs: ["pitch_cv", "gate"], outputs: ["pitch_out", "gate_out"] },
+  grain_player: { inputs: ["trigger", "grain_pos", "grain_amp", "grain_pan", "grain_len", "filter_cutoff"], outputs: ["out_l", "out_r"] },
+  ant_swarm: { inputs: ["pitch_cv", "gate"], outputs: ["audio_out"] },
+  ca_sequencer: { inputs: ["clock", "reset"], outputs: ["gate", "pitch_cv"] },
+  chaos_lfo: { inputs: ["rate_cv"], outputs: ["cv_out"] },
+  kuramoto_lfo: { inputs: ["rate_cv"], outputs: ["cv_out"] },
+  lsystem_seq: { inputs: ["clock", "reset"], outputs: ["gate", "pitch_cv"] },
+  frac_filter: { inputs: ["audio_in", "cutoff_cv"], outputs: ["audio_out"] },
+  hawkes_trigger: { inputs: ["clock", "reset"], outputs: ["gate_out"] },
+  stoch_res: { inputs: ["clock", "cv_in"], outputs: ["gate_out", "cv_out"] },
+  tonnetz_seq: { inputs: ["clock", "reset"], outputs: ["gate", "pitch_cv"] },
+  soma_brain: { inputs: ["pitch_cv", "sync"], outputs: ["audio_out"] },
+  rd_sequencer: { inputs: ["clock", "reset"], outputs: ["gate", "pitch_cv", "velocity_cv"] },
+  spectral_freeze: { inputs: ["audio_in", "freeze"], outputs: ["audio_out"] },
+};
+
+const MODULE_PARAMS = {
+  oscillator: { frequency: [40, 1600, 220, 1], amplitude: [0, 1, 0.16, 0.01], waveform: [0, 3, 1, 1] },
+  lfo: { rate: [0.01, 24, 0.2, 0.01], depth: [0, 2400, 320, 1] },
+  vca: { level: [0, 1, 0.8, 0.01] },
+  filter: { cutoff: [30, 10000, 780, 1], resonance: [0.1, 20, 3.2, 0.01], type: [0, 2, 0, 1] },
+  mixer: {
+    level_1: [0, 1, 0.45, 0.01],
+    level_2: [0, 1, 0.25, 0.01],
+    level_3: [0, 1, 0.25, 0.01],
+    level_4: [0, 1, 0.25, 0.01],
+    level_5: [0, 1, 0.25, 0.01],
+    level_6: [0, 1, 0.25, 0.01],
+    level_7: [0, 1, 0.25, 0.01],
+    level_8: [0, 1, 0.25, 0.01],
+  },
+  noise_gen: { level: [0, 1, 0.22, 0.01] },
+  delay_line: { time: [20, 1800, 220, 1], feedback: [0, 0.95, 0.38, 0.01], mix: [0, 1, 0.28, 0.01] },
+  bitcrusher: { bit_depth: [2, 16, 10, 1], mix: [0, 1, 0.35, 0.01] },
+  stereo_panner: { pan: [-1, 1, 0, 0.01] },
+  compressor: {
+    threshold: [-60, 0, -14, 0.1],
+    ratio: [1, 20, 4, 0.1],
+    attack: [0.001, 0.2, 0.008, 0.001],
+    release: [0.02, 1, 0.16, 0.01],
+    makeup: [0, 2.5, 1, 0.01],
+  },
+  tape_saturation: { drive: [0.5, 8, 2.2, 0.01], mix: [0, 1, 0.7, 0.01] },
+  moog_filter: { cutoff: [30, 10000, 820, 1], resonance: [0.05, 18, 2.9, 0.01] },
+  svf: { cutoff: [30, 10000, 820, 1], resonance: [0.05, 18, 2.9, 0.01] },
+  wavefolder: { drive: [0.5, 8, 2.5, 0.01], mix: [0, 1, 0.7, 0.01] },
+  reverb: { mix: [0, 1, 0.24, 0.01], decay: [0.2, 4, 1.2, 0.01] },
+  chorus: { mix: [0, 1, 0.35, 0.01], depth: [0, 1, 0.45, 0.01], rate: [0.05, 3, 0.35, 0.01] },
+  flanger: { mix: [0, 1, 0.32, 0.01], depth: [0, 1, 0.35, 0.01], rate: [0.05, 4, 0.22, 0.01] },
+  phaser: { mix: [0, 1, 0.34, 0.01], depth: [0, 1, 0.42, 0.01], rate: [0.05, 4, 0.3, 0.01] },
+  comb_filter: { feedback: [0, 0.95, 0.43, 0.01], mix: [0, 1, 0.45, 0.01] },
+  fm_operator: { frequency: [40, 1200, 220, 1], ratio: [0.5, 12, 2, 0.01], mod_index: [0, 2000, 120, 1], level: [0, 1, 0.15, 0.01] },
+  supersaw: { frequency: [50, 1500, 140, 1], detune: [0, 60, 18, 0.1], amplitude: [0, 1, 0.16, 0.01] },
+  pwm_oscillator: { frequency: [50, 1500, 180, 1], amplitude: [0, 1, 0.16, 0.01] },
+  additive_osc: { frequency: [50, 1500, 140, 1], amplitude: [0, 1, 0.16, 0.01] },
+  phase_distortion: { frequency: [50, 1500, 160, 1], distortion: [0, 1, 0.25, 0.01], amplitude: [0, 1, 0.16, 0.01] },
+};
+
+const FILTER_TYPES = ["lowpass", "bandpass", "highpass"];
+
+const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const createId = (() => {
+  let i = 0;
+  return (prefix) => `${prefix}_${++i}`;
+})();
+
+function makeNoiseBuffer(ctx) {
+  const length = ctx.sampleRate * 2;
+  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
+  return buffer;
+}
+
+function makeSaturatorCurve(drive = 1.8) {
+  const n = 2048;
+  const curve = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const x = (i * 2) / (n - 1) - 1;
+    curve[i] = Math.tanh(x * drive);
+  }
+  return curve;
+}
+
+function makeBitcrusherCurve(bits = 8) {
+  const n = 2048;
+  const curve = new Float32Array(n);
+  const levels = Math.max(2, 2 ** Math.round(bits));
+  for (let i = 0; i < n; i++) {
+    const x = (i * 2) / (n - 1) - 1;
+    curve[i] = Math.round(x * levels) / levels;
+  }
+  return curve;
+}
+
+function makeImpulse(ctx, seconds = 2.2) {
+  const length = Math.floor(ctx.sampleRate * seconds);
+  const impulse = ctx.createBuffer(2, length, ctx.sampleRate);
+  for (let c = 0; c < 2; c++) {
+    const ch = impulse.getChannelData(c);
+    for (let i = 0; i < length; i++) {
+      const t = i / length;
+      ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 2.4);
+    }
+  }
+  return impulse;
+}
+
+function pickPorts(type) {
+  return MODULE_PORTS[type] || { inputs: ["in"], outputs: ["out"] };
+}
+
+function defaultParams(type) {
+  const def = MODULE_PARAMS[type] || {};
+  const out = {};
+  for (const [name, [, , val]] of Object.entries(def)) out[name] = val;
+  return out;
+}
+
+class DroneAudioEngine {
+  constructor() {
+    this.ctx = null;
+    this.masterGain = null;
+    this.analyser = null;
+    this.moduleMeta = new Map();
+    this.modules = new Map();
+    this.connectionMeta = new Map();
+    this.connectionRefs = new Map();
+    this.noiseBuffer = null;
+    this.muted = true;
+  }
+
+  async ensureStarted() {
+    if (!this.ctx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) throw new Error("Web Audio API is not available in this browser.");
+      this.ctx = new Ctx();
+      this.masterGain = new GainNode(this.ctx, { gain: 0 });
+      this.analyser = new AnalyserNode(this.ctx, { fftSize: 1024, smoothingTimeConstant: 0.72 });
+      this.noiseBuffer = makeNoiseBuffer(this.ctx);
+      this.masterGain.connect(this.analyser);
+      this.analyser.connect(this.ctx.destination);
+
+      for (const meta of this.moduleMeta.values()) this.realizeModule(meta);
+      for (const conn of this.connectionMeta.values()) this.realizeConnection(conn);
+    }
+    if (this.ctx.state !== "running") await this.ctx.resume();
+  }
+
+  setMuted(flag) {
+    this.muted = !!flag;
+    if (this.masterGain) this.masterGain.gain.setTargetAtTime(this.muted ? 0 : 1, this.ctx.currentTime, 0.015);
+  }
+
+  getAnalyser() {
+    return this.analyser;
+  }
+
+  addModule(meta) {
+    this.moduleMeta.set(meta.id, { ...meta, params: { ...meta.params } });
+    if (this.ctx) {
+      this.realizeModule(this.moduleMeta.get(meta.id));
+      for (const conn of this.connectionMeta.values()) this.realizeConnection(conn);
+    }
+  }
+
+  setParam(moduleId, param, value) {
+    const meta = this.moduleMeta.get(moduleId);
+    if (!meta) return;
+    meta.params[param] = value;
+    const instance = this.modules.get(moduleId);
+    if (!instance?.paramSetters) return;
+    const setter = instance.paramSetters[param];
+    if (typeof setter === "function") setter(value);
+  }
+
+  connect(connection) {
+    this.connectionMeta.set(connection.id, { ...connection });
+    if (this.ctx) this.realizeConnection(connection);
+  }
+
+  dispose() {
+    for (const conn of this.connectionRefs.values()) {
+      try { conn.source.disconnect(conn.target); } catch {}
+    }
+    this.connectionRefs.clear();
+
+    for (const instance of this.modules.values()) {
+      if (instance.stop) {
+        try { instance.stop(); } catch {}
+      }
+      if (instance.nodes) {
+        for (const node of instance.nodes) {
+          try { node.disconnect(); } catch {}
+        }
+      }
+    }
+    this.modules.clear();
+
+    if (this.ctx) {
+      try { this.ctx.close(); } catch {}
+    }
+    this.ctx = null;
+    this.masterGain = null;
+    this.analyser = null;
+  }
+
+  realizeModule(meta) {
+    if (!this.ctx || this.modules.has(meta.id)) return;
+    const ports = pickPorts(meta.type);
+    const instance = this.createInstance(meta, ports);
+    this.modules.set(meta.id, instance);
+  }
+
+  realizeConnection(connection) {
+    if (this.connectionRefs.has(connection.id)) return;
+    const fromMod = this.modules.get(connection.fromModuleId);
+    const toMod = this.modules.get(connection.toModuleId);
+    if (!fromMod || !toMod) return;
+
+    const source = fromMod.outputs[connection.fromPort] || Object.values(fromMod.outputs)[0];
+    const target = toMod.inputs[connection.toPort] || Object.values(toMod.inputs)[0];
+    if (!source || !target) return;
+    try {
+      source.connect(target);
+      this.connectionRefs.set(connection.id, { source, target });
+    } catch {}
+  }
+
+  createInstance(meta, ports) {
+    if (!this.ctx) return null;
+    const type = meta.type;
+
+    if (type === "mixer") return this.createMixer(meta, ports);
+    if (type === "oscillator" || type === "pwm_oscillator") return this.createOsc(meta, ports, type === "pwm_oscillator" ? "square" : "sawtooth");
+    if (type === "lfo") return this.createLfo(meta, ports);
+    if (type === "noise_gen") return this.createNoise(meta, ports);
+    if (type === "filter" || type === "moog_filter" || type === "svf" || type === "ms20_filter" || type === "formant_filter") {
+      return this.createFilter(meta, ports, type);
+    }
+    if (type === "vca") return this.createVca(meta, ports);
+    if (type === "delay_line" || type === "chorus" || type === "flanger" || type === "phaser" || type === "comb_filter") {
+      return this.createDelayFx(meta, ports, type);
+    }
+    if (type === "bitcrusher") return this.createBitcrusher(meta, ports);
+    if (type === "stereo_panner") return this.createPanner(meta, ports);
+    if (type === "compressor") return this.createCompressor(meta, ports);
+    if (type === "tape_saturation" || type === "wavefolder" || type === "ring_mod") return this.createSaturator(meta, ports);
+    if (type === "reverb") return this.createReverb(meta, ports);
+    if (type === "fm_operator") return this.createFm(meta, ports);
+    if (type === "supersaw") return this.createSupersaw(meta, ports);
+    if (type === "additive_osc") return this.createAdditive(meta, ports);
+    if (type === "phase_distortion") return this.createPhaseDist(meta, ports);
+
+    return this.createPassThrough(meta, ports);
+  }
+
+  createMixer(meta, ports) {
+    const nodes = [];
+    const sum = new GainNode(this.ctx, { gain: 1 });
+    nodes.push(sum);
+    const inputs = {};
+    const outputs = {};
+    const paramSetters = {};
+
+    ports.inputs.forEach((name, idx) => {
+      const gain = new GainNode(this.ctx, { gain: meta.params[`level_${idx + 1}`] ?? 0.25 });
+      gain.connect(sum);
+      nodes.push(gain);
+      inputs[name] = gain;
+      paramSetters[`level_${idx + 1}`] = (v) => gain.gain.setTargetAtTime(clamp(v, 0, 1), this.ctx.currentTime, 0.01);
+    });
+
+    const output = new GainNode(this.ctx, { gain: 1 });
+    sum.connect(output);
+    output.connect(this.masterGain);
+    nodes.push(output);
+    outputs.audio_out = output;
+
+    return { nodes, inputs, outputs, paramSetters };
+  }
+
+  createOsc(meta, ports, waveform = "sawtooth") {
+    const nodes = [];
+    const osc = new OscillatorNode(this.ctx, {
+      type: waveform,
+      frequency: meta.params.frequency ?? 220,
+    });
+    const amp = new GainNode(this.ctx, { gain: clamp(meta.params.amplitude ?? 0.15, 0, 1) });
+    osc.connect(amp);
+    osc.start();
+    nodes.push(osc, amp);
+
+    const outputs = {};
+    for (const out of ports.outputs) outputs[out] = amp;
+
+    const inputs = {};
+    if (ports.inputs.includes("pitch_cv")) inputs.pitch_cv = osc.frequency;
+
+    const paramSetters = {
+      frequency: (v) => osc.frequency.setTargetAtTime(clamp(v, 20, 18000), this.ctx.currentTime, 0.01),
+      amplitude: (v) => amp.gain.setTargetAtTime(clamp(v, 0, 1), this.ctx.currentTime, 0.01),
+      waveform: (v) => {
+        const idx = Math.round(clamp(v, 0, 3));
+        osc.type = ["sine", "sawtooth", "square", "triangle"][idx];
+      },
+    };
+
+    return { nodes, inputs, outputs, paramSetters, stop: () => osc.stop() };
+  }
+
+  createLfo(meta, ports) {
+    const nodes = [];
+    const osc = new OscillatorNode(this.ctx, { type: "sine", frequency: meta.params.rate ?? 0.2 });
+    const gain = new GainNode(this.ctx, { gain: meta.params.depth ?? 220 });
+    osc.connect(gain);
+    osc.start();
+    nodes.push(osc, gain);
+
+    const outputs = {};
+    for (const out of ports.outputs) outputs[out] = gain;
+    const inputs = {};
+    if (ports.inputs.includes("rate_cv")) inputs.rate_cv = osc.frequency;
+
+    const paramSetters = {
+      rate: (v) => osc.frequency.setTargetAtTime(clamp(v, 0.01, 40), this.ctx.currentTime, 0.03),
+      depth: (v) => gain.gain.setTargetAtTime(clamp(v, 0, 24000), this.ctx.currentTime, 0.03),
+    };
+    return { nodes, inputs, outputs, paramSetters, stop: () => osc.stop() };
+  }
+
+  createNoise(meta, ports) {
+    const nodes = [];
+    const src = new AudioBufferSourceNode(this.ctx, { buffer: this.noiseBuffer, loop: true });
+    const gain = new GainNode(this.ctx, { gain: clamp(meta.params.level ?? 0.2, 0, 1) });
+    src.connect(gain);
+    src.start();
+    nodes.push(src, gain);
+
+    const outputs = {};
+    for (const out of ports.outputs) outputs[out] = gain;
+    const inputs = {};
+    const paramSetters = {
+      level: (v) => gain.gain.setTargetAtTime(clamp(v, 0, 1), this.ctx.currentTime, 0.02),
+    };
+    return { nodes, inputs, outputs, paramSetters, stop: () => src.stop() };
+  }
+
+  createFilter(meta, ports, type) {
+    const nodes = [];
+    const input = new GainNode(this.ctx, { gain: 1 });
+    const filterType = type === "formant_filter" ? "bandpass" : "lowpass";
+    const biquad = new BiquadFilterNode(this.ctx, {
+      type: filterType,
+      frequency: meta.params.cutoff ?? 780,
+      Q: meta.params.resonance ?? 3.2,
+    });
+    const output = new GainNode(this.ctx, { gain: 1 });
+    input.connect(biquad);
+    biquad.connect(output);
+    nodes.push(input, biquad, output);
+
+    const inputs = { audio_in: input };
+    if (ports.inputs.includes("cutoff_cv")) inputs.cutoff_cv = biquad.frequency;
+    if (ports.inputs.includes("res_cv")) inputs.res_cv = biquad.Q;
+    if (ports.inputs.includes("vowel_cv")) inputs.vowel_cv = biquad.frequency;
+
+    const outputs = {};
+    for (const out of ports.outputs) outputs[out] = output;
+
+    const paramSetters = {
+      cutoff: (v) => biquad.frequency.setTargetAtTime(clamp(v, 20, 18000), this.ctx.currentTime, 0.01),
+      resonance: (v) => biquad.Q.setTargetAtTime(clamp(v, 0.05, 30), this.ctx.currentTime, 0.01),
+      type: (v) => {
+        const idx = Math.round(clamp(v, 0, FILTER_TYPES.length - 1));
+        biquad.type = FILTER_TYPES[idx];
+      },
+    };
+
+    return { nodes, inputs, outputs, paramSetters };
+  }
+
+  createVca(meta, ports) {
+    const nodes = [];
+    const input = new GainNode(this.ctx, { gain: 1 });
+    const vca = new GainNode(this.ctx, { gain: clamp(meta.params.level ?? 0.8, 0, 1) });
+    input.connect(vca);
+    nodes.push(input, vca);
+    const inputs = { audio_in: input };
+    if (ports.inputs.includes("level_cv")) inputs.level_cv = vca.gain;
+    const outputs = {};
+    for (const out of ports.outputs) outputs[out] = vca;
+    const paramSetters = {
+      level: (v) => vca.gain.setTargetAtTime(clamp(v, 0, 1), this.ctx.currentTime, 0.01),
+    };
+    return { nodes, inputs, outputs, paramSetters };
+  }
+
+  createDelayFx(meta, ports, type) {
+    const nodes = [];
+    const input = new GainNode(this.ctx, { gain: 1 });
+    const delay = new DelayNode(this.ctx, { maxDelayTime: 2.2, delayTime: clamp((meta.params.time ?? 220) / 1000, 0.001, 2.0) });
+    const feedback = new GainNode(this.ctx, { gain: clamp(meta.params.feedback ?? 0.34, 0, 0.96) });
+    const wet = new GainNode(this.ctx, { gain: clamp(meta.params.mix ?? 0.3, 0, 1) });
+    const dry = new GainNode(this.ctx, { gain: 1 - clamp(meta.params.mix ?? 0.3, 0, 1) });
+    const output = new GainNode(this.ctx, { gain: 1 });
+    nodes.push(input, delay, feedback, wet, dry, output);
+
+    input.connect(dry);
+    input.connect(delay);
+    delay.connect(feedback);
+    feedback.connect(delay);
+    delay.connect(wet);
+    dry.connect(output);
+    wet.connect(output);
+
+    if (type === "chorus" || type === "flanger" || type === "phaser") {
+      const lfo = new OscillatorNode(this.ctx, { type: "sine", frequency: clamp(meta.params.rate ?? 0.25, 0.05, 6) });
+      const depthGain = new GainNode(this.ctx, { gain: clamp(meta.params.depth ?? 0.4, 0, 1) * 0.005 });
+      lfo.connect(depthGain);
+      depthGain.connect(delay.delayTime);
+      lfo.start();
+      nodes.push(lfo, depthGain);
+    }
+
+    const inputs = { audio_in: input };
+    if (ports.inputs.includes("time_cv")) inputs.time_cv = delay.delayTime;
+    if (ports.inputs.includes("feedback_cv")) inputs.feedback_cv = feedback.gain;
+    const outputs = {};
+    for (const out of ports.outputs) outputs[out] = output;
+
+    const paramSetters = {
+      time: (v) => delay.delayTime.setTargetAtTime(clamp(v, 1, 2000) / 1000, this.ctx.currentTime, 0.02),
+      feedback: (v) => feedback.gain.setTargetAtTime(clamp(v, 0, 0.96), this.ctx.currentTime, 0.02),
+      mix: (v) => {
+        const m = clamp(v, 0, 1);
+        wet.gain.setTargetAtTime(m, this.ctx.currentTime, 0.02);
+        dry.gain.setTargetAtTime(1 - m, this.ctx.currentTime, 0.02);
+      },
+      rate: (v) => {
+        const lfo = nodes.find((n) => n instanceof OscillatorNode && n.frequency);
+        if (lfo) lfo.frequency.setTargetAtTime(clamp(v, 0.05, 8), this.ctx.currentTime, 0.03);
+      },
+      depth: (v) => {
+        const depth = nodes.find((n) => n instanceof GainNode && n !== wet && n !== dry && n !== feedback && n !== output && n !== input);
+        if (depth) depth.gain.setTargetAtTime(clamp(v, 0, 1) * 0.005, this.ctx.currentTime, 0.03);
+      },
+    };
+    return { nodes, inputs, outputs, paramSetters };
+  }
+
+  createBitcrusher(meta, ports) {
+    const nodes = [];
+    const input = new GainNode(this.ctx, { gain: 1 });
+    const shaper = new WaveShaperNode(this.ctx, { curve: makeBitcrusherCurve(meta.params.bit_depth ?? 8), oversample: "none" });
+    const wet = new GainNode(this.ctx, { gain: clamp(meta.params.mix ?? 0.35, 0, 1) });
+    const dry = new GainNode(this.ctx, { gain: 1 - clamp(meta.params.mix ?? 0.35, 0, 1) });
+    const output = new GainNode(this.ctx, { gain: 1 });
+    nodes.push(input, shaper, wet, dry, output);
+
+    input.connect(dry);
+    input.connect(shaper);
+    shaper.connect(wet);
+    wet.connect(output);
+    dry.connect(output);
+
+    const outputs = {};
+    for (const out of ports.outputs) outputs[out] = output;
+    const inputs = { audio_in: input };
+    const paramSetters = {
+      bit_depth: (v) => { shaper.curve = makeBitcrusherCurve(clamp(v, 2, 16)); },
+      mix: (v) => {
+        const m = clamp(v, 0, 1);
+        wet.gain.setTargetAtTime(m, this.ctx.currentTime, 0.02);
+        dry.gain.setTargetAtTime(1 - m, this.ctx.currentTime, 0.02);
+      },
+    };
+    return { nodes, inputs, outputs, paramSetters };
+  }
+
+  createPanner(meta, ports) {
+    const nodes = [];
+    const input = new GainNode(this.ctx, { gain: 1 });
+    const pan = new StereoPannerNode(this.ctx, { pan: clamp(meta.params.pan ?? 0, -1, 1) });
+    input.connect(pan);
+    nodes.push(input, pan);
+    const outputs = {};
+    for (const out of ports.outputs) outputs[out] = pan;
+    if (!outputs.audio_out) outputs.audio_out = pan;
+    const inputs = { audio_in: input };
+    if (ports.inputs.includes("pan_cv")) inputs.pan_cv = pan.pan;
+    const paramSetters = {
+      pan: (v) => pan.pan.setTargetAtTime(clamp(v, -1, 1), this.ctx.currentTime, 0.03),
+    };
+    return { nodes, inputs, outputs, paramSetters };
+  }
+
+  createCompressor(meta, ports) {
+    const nodes = [];
+    const input = new GainNode(this.ctx, { gain: 1 });
+    const comp = new DynamicsCompressorNode(this.ctx, {
+      threshold: meta.params.threshold ?? -14,
+      ratio: meta.params.ratio ?? 4,
+      attack: meta.params.attack ?? 0.008,
+      release: meta.params.release ?? 0.16,
+      knee: 6,
+    });
+    const makeup = new GainNode(this.ctx, { gain: meta.params.makeup ?? 1 });
+    input.connect(comp);
+    comp.connect(makeup);
+    nodes.push(input, comp, makeup);
+
+    const inputs = { audio_in: input };
+    const outputs = {};
+    for (const out of ports.outputs) outputs[out] = makeup;
+    const paramSetters = {
+      threshold: (v) => comp.threshold.setValueAtTime(clamp(v, -80, 0), this.ctx.currentTime),
+      ratio: (v) => comp.ratio.setValueAtTime(clamp(v, 1, 20), this.ctx.currentTime),
+      attack: (v) => comp.attack.setValueAtTime(clamp(v, 0.001, 0.3), this.ctx.currentTime),
+      release: (v) => comp.release.setValueAtTime(clamp(v, 0.01, 1), this.ctx.currentTime),
+      makeup: (v) => makeup.gain.setTargetAtTime(clamp(v, 0, 3), this.ctx.currentTime, 0.02),
+    };
+    return { nodes, inputs, outputs, paramSetters };
+  }
+
+  createSaturator(meta, ports) {
+    const nodes = [];
+    const input = new GainNode(this.ctx, { gain: 1 });
+    const shaper = new WaveShaperNode(this.ctx, { curve: makeSaturatorCurve(meta.params.drive ?? 2.2), oversample: "4x" });
+    const wet = new GainNode(this.ctx, { gain: clamp(meta.params.mix ?? 0.65, 0, 1) });
+    const dry = new GainNode(this.ctx, { gain: 1 - clamp(meta.params.mix ?? 0.65, 0, 1) });
+    const output = new GainNode(this.ctx, { gain: 1 });
+    nodes.push(input, shaper, wet, dry, output);
+    input.connect(dry);
+    input.connect(shaper);
+    shaper.connect(wet);
+    wet.connect(output);
+    dry.connect(output);
+
+    const inputs = {};
+    const firstIn = ports.inputs[0] || "audio_in";
+    inputs[firstIn] = input;
+    if (ports.inputs.includes("drive_cv")) inputs.drive_cv = wet.gain;
+
+    const outputs = {};
+    for (const out of ports.outputs) outputs[out] = output;
+    const paramSetters = {
+      drive: (v) => { shaper.curve = makeSaturatorCurve(clamp(v, 0.5, 10)); },
+      mix: (v) => {
+        const m = clamp(v, 0, 1);
+        wet.gain.setTargetAtTime(m, this.ctx.currentTime, 0.02);
+        dry.gain.setTargetAtTime(1 - m, this.ctx.currentTime, 0.02);
+      },
+    };
+    return { nodes, inputs, outputs, paramSetters };
+  }
+
+  createReverb(meta, ports) {
+    const nodes = [];
+    const input = new GainNode(this.ctx, { gain: 1 });
+    const convolver = new ConvolverNode(this.ctx, { buffer: makeImpulse(this.ctx, meta.params.decay ?? 1.2) });
+    const wet = new GainNode(this.ctx, { gain: clamp(meta.params.mix ?? 0.24, 0, 1) });
+    const dry = new GainNode(this.ctx, { gain: 1 - clamp(meta.params.mix ?? 0.24, 0, 1) });
+    const output = new GainNode(this.ctx, { gain: 1 });
+    nodes.push(input, convolver, wet, dry, output);
+    input.connect(dry);
+    input.connect(convolver);
+    convolver.connect(wet);
+    wet.connect(output);
+    dry.connect(output);
+
+    const inputs = { audio_in: input };
+    const outputs = {};
+    for (const out of ports.outputs) outputs[out] = output;
+    const paramSetters = {
+      mix: (v) => {
+        const m = clamp(v, 0, 1);
+        wet.gain.setTargetAtTime(m, this.ctx.currentTime, 0.03);
+        dry.gain.setTargetAtTime(1 - m, this.ctx.currentTime, 0.03);
+      },
+      decay: (v) => { convolver.buffer = makeImpulse(this.ctx, clamp(v, 0.2, 4)); },
+    };
+    return { nodes, inputs, outputs, paramSetters };
+  }
+
+  createFm(meta, ports) {
+    const nodes = [];
+    const carrier = new OscillatorNode(this.ctx, { type: "sine", frequency: meta.params.frequency ?? 220 });
+    const mod = new OscillatorNode(this.ctx, { type: "sine", frequency: (meta.params.frequency ?? 220) * (meta.params.ratio ?? 2) });
+    const modGain = new GainNode(this.ctx, { gain: meta.params.mod_index ?? 120 });
+    const amp = new GainNode(this.ctx, { gain: clamp(meta.params.level ?? 0.15, 0, 1) });
+    mod.connect(modGain);
+    modGain.connect(carrier.frequency);
+    carrier.connect(amp);
+    carrier.start();
+    mod.start();
+    nodes.push(carrier, mod, modGain, amp);
+
+    const outputs = {};
+    for (const out of ports.outputs) outputs[out] = amp;
+    const inputs = {};
+    if (ports.inputs.includes("pitch_cv")) inputs.pitch_cv = carrier.frequency;
+    if (ports.inputs.includes("mod_cv")) inputs.mod_cv = modGain.gain;
+    const paramSetters = {
+      frequency: (v) => {
+        const f = clamp(v, 20, 1600);
+        carrier.frequency.setTargetAtTime(f, this.ctx.currentTime, 0.01);
+        mod.frequency.setTargetAtTime(f * clamp(meta.params.ratio ?? 2, 0.5, 16), this.ctx.currentTime, 0.01);
+      },
+      ratio: (v) => {
+        const r = clamp(v, 0.5, 16);
+        mod.frequency.setTargetAtTime(clamp(meta.params.frequency ?? 220, 20, 1600) * r, this.ctx.currentTime, 0.01);
+      },
+      mod_index: (v) => modGain.gain.setTargetAtTime(clamp(v, 0, 4000), this.ctx.currentTime, 0.02),
+      level: (v) => amp.gain.setTargetAtTime(clamp(v, 0, 1), this.ctx.currentTime, 0.02),
+    };
+    return { nodes, inputs, outputs, paramSetters, stop: () => { carrier.stop(); mod.stop(); } };
+  }
+
+  createSupersaw(meta, ports) {
+    const nodes = [];
+    const sum = new GainNode(this.ctx, { gain: clamp(meta.params.amplitude ?? 0.16, 0, 1) / 5 });
+    const base = clamp(meta.params.frequency ?? 140, 20, 2000);
+    const spread = clamp(meta.params.detune ?? 18, 0, 100);
+    const detunes = [-spread, -spread / 2, 0, spread / 2, spread];
+    const oscs = detunes.map((det) => {
+      const osc = new OscillatorNode(this.ctx, { type: "sawtooth", frequency: base, detune: det });
+      osc.connect(sum);
+      osc.start();
+      nodes.push(osc);
+      return osc;
+    });
+    nodes.push(sum);
+
+    const outputs = {};
+    for (const out of ports.outputs) outputs[out] = sum;
+    const inputs = {};
+    if (ports.inputs.includes("pitch_cv")) inputs.pitch_cv = oscs[2].frequency;
+    const paramSetters = {
+      frequency: (v) => {
+        const f = clamp(v, 20, 2000);
+        for (const osc of oscs) osc.frequency.setTargetAtTime(f, this.ctx.currentTime, 0.01);
+      },
+      detune: (v) => {
+        const d = clamp(v, 0, 120);
+        const det = [-d, -d / 2, 0, d / 2, d];
+        oscs.forEach((osc, i) => osc.detune.setTargetAtTime(det[i], this.ctx.currentTime, 0.02));
+      },
+      amplitude: (v) => sum.gain.setTargetAtTime(clamp(v, 0, 1) / 5, this.ctx.currentTime, 0.02),
+    };
+    return { nodes, inputs, outputs, paramSetters, stop: () => oscs.forEach((osc) => osc.stop()) };
+  }
+
+  createAdditive(meta, ports) {
+    const nodes = [];
+    const sum = new GainNode(this.ctx, { gain: clamp(meta.params.amplitude ?? 0.16, 0, 1) });
+    const base = clamp(meta.params.frequency ?? 140, 20, 1200);
+    const harmonics = [1, 2, 3, 4, 5, 6];
+    const gains = [1, 0.6, 0.35, 0.2, 0.15, 0.1];
+    const oscs = [];
+    harmonics.forEach((h, i) => {
+      const osc = new OscillatorNode(this.ctx, { type: "sine", frequency: base * h });
+      const g = new GainNode(this.ctx, { gain: gains[i] / harmonics.length });
+      osc.connect(g);
+      g.connect(sum);
+      osc.start();
+      oscs.push(osc);
+      nodes.push(osc, g);
+    });
+    nodes.push(sum);
+    const outputs = {};
+    for (const out of ports.outputs) outputs[out] = sum;
+    const inputs = {};
+    if (ports.inputs.includes("pitch_cv")) inputs.pitch_cv = oscs[0].frequency;
+    const paramSetters = {
+      frequency: (v) => {
+        const f = clamp(v, 20, 1200);
+        harmonics.forEach((h, i) => oscs[i].frequency.setTargetAtTime(f * h, this.ctx.currentTime, 0.01));
+      },
+      amplitude: (v) => sum.gain.setTargetAtTime(clamp(v, 0, 1), this.ctx.currentTime, 0.02),
+    };
+    return { nodes, inputs, outputs, paramSetters, stop: () => oscs.forEach((osc) => osc.stop()) };
+  }
+
+  createPhaseDist(meta, ports) {
+    const nodes = [];
+    const osc = new OscillatorNode(this.ctx, { type: "sawtooth", frequency: meta.params.frequency ?? 160 });
+    const shaper = new WaveShaperNode(this.ctx, { curve: makeSaturatorCurve((meta.params.distortion ?? 0.25) * 7 + 1) });
+    const amp = new GainNode(this.ctx, { gain: clamp(meta.params.amplitude ?? 0.16, 0, 1) });
+    osc.connect(shaper);
+    shaper.connect(amp);
+    osc.start();
+    nodes.push(osc, shaper, amp);
+    const outputs = {};
+    for (const out of ports.outputs) outputs[out] = amp;
+    const inputs = {};
+    if (ports.inputs.includes("pitch_cv")) inputs.pitch_cv = osc.frequency;
+    const paramSetters = {
+      frequency: (v) => osc.frequency.setTargetAtTime(clamp(v, 20, 1800), this.ctx.currentTime, 0.01),
+      distortion: (v) => { shaper.curve = makeSaturatorCurve(clamp(v, 0, 1) * 7 + 1); },
+      amplitude: (v) => amp.gain.setTargetAtTime(clamp(v, 0, 1), this.ctx.currentTime, 0.02),
+    };
+    return { nodes, inputs, outputs, paramSetters, stop: () => osc.stop() };
+  }
+
+  createPassThrough(meta, ports) {
+    const nodes = [];
+    const input = new GainNode(this.ctx, { gain: 1 });
+    const output = new GainNode(this.ctx, { gain: 1 });
+    input.connect(output);
+    nodes.push(input, output);
+
+    const inputs = {};
+    for (const port of ports.inputs) inputs[port] = input;
+    const outputs = {};
+    for (const port of ports.outputs) outputs[port] = output;
+    if (ports.inputs.length === 0 && ports.outputs.length > 0) {
+      const silent = new ConstantSourceNode(this.ctx, { offset: 0 });
+      silent.connect(output);
+      silent.start();
+      nodes.push(silent);
+      return { nodes, inputs, outputs, paramSetters: {}, stop: () => silent.stop() };
+    }
+    return { nodes, inputs, outputs, paramSetters: {} };
+  }
+}
+
+function App() {
+  const [modules, setModules] = createSignal([]);
+  const [connections, setConnections] = createSignal([]);
+  const [messages, setMessages] = createSignal([
+    { role: "user", type: "text", text: "Let’s start a session." },
+    { role: "assistant", type: "text", text: "Session is already running. A layer mixer is preloaded; right-click the patch graph to add modules." },
+  ]);
+  const [typing, setTyping] = createSignal(false);
+  const [status, setStatus] = createSignal("Idle • Right-click graph to add modules");
+  const [pendingOutput, setPendingOutput] = createSignal(null);
+  const [contextMenu, setContextMenu] = createSignal(null);
+  const [busyPreset, setBusyPreset] = createSignal(false);
+  const [muted, setMuted] = createSignal(true);
+  const [pointer, setPointer] = createSignal({ x: 0, y: 0 });
+
+  const engine = new DroneAudioEngine();
+  const portRefs = new Map();
+
+  let graphRef;
+  let cableCanvas;
+  let scopeCanvas;
+  let chatRef;
+  let cableRaf = 0;
+  let scopeRaf = 0;
+  let resizeObserver = null;
+
+  const addMessage = (msg) => setMessages((prev) => [...prev, msg]);
+
+  const getModuleById = (id) => modules().find((m) => m.id === id);
+
+  const setPortRef = (moduleId, dir, port, el) => {
+    const key = `${moduleId}:${dir}:${port}`;
+    if (el) portRefs.set(key, el);
+    else portRefs.delete(key);
+  };
+
+  const addModule = (type, x, y, forcedName = null, forcedParams = null) => {
+    const ports = pickPorts(type);
+    const params = { ...defaultParams(type), ...(forcedParams || {}) };
+    const mod = {
+      id: createId(type),
+      type,
+      name: forcedName || `${type}_${Math.floor(Math.random() * 90 + 10)}`,
+      x: Math.round(x),
+      y: Math.round(y),
+      ports,
+      params,
+    };
+    setModules((prev) => [...prev, mod]);
+    engine.addModule(mod);
+    return mod;
+  };
+
+  const updateModuleParam = (moduleId, param, value) => {
+    setModules((prev) =>
+      prev.map((m) => (m.id === moduleId ? { ...m, params: { ...m.params, [param]: value } } : m))
+    );
+    engine.setParam(moduleId, param, value);
+  };
+
+  const addConnection = (fromModuleId, fromPort, toModuleId, toPort) => {
+    const id = `${fromModuleId}:${fromPort}->${toModuleId}:${toPort}`;
+    if (connections().some((c) => c.id === id)) return;
+    const next = { id, fromModuleId, fromPort, toModuleId, toPort };
+    setConnections((prev) => [...prev, next]);
+    engine.connect(next);
+  };
+
+  const onPortClick = (moduleId, dir, portName) => {
+    if (dir === "output") {
+      setPendingOutput({ moduleId, portName });
+      const mod = getModuleById(moduleId);
+      setStatus(`FROM: ${mod?.name || moduleId}.${portName} • click an input port`);
+      return;
+    }
+    const pending = pendingOutput();
+    if (!pending) {
+      setStatus("Click an output port first.");
+      return;
+    }
+    addConnection(pending.moduleId, pending.portName, moduleId, portName);
+    setPendingOutput(null);
+    setStatus(`Patched ${pending.portName} → ${portName}`);
+  };
+
+  const moveModule = (moduleId, x, y) => {
+    const width = graphRef?.clientWidth || 600;
+    const height = graphRef?.clientHeight || 420;
+    const clampedX = clamp(x, 8, width - 198);
+    const clampedY = clamp(y, 30, height - 132);
+    setModules((prev) => prev.map((m) => (m.id === moduleId ? { ...m, x: clampedX, y: clampedY } : m)));
+  };
+
+  const onModuleDragStart = (ev, moduleId) => {
+    ev.preventDefault();
+    const mod = getModuleById(moduleId);
+    if (!mod) return;
+    const startX = ev.clientX;
+    const startY = ev.clientY;
+    const baseX = mod.x;
+    const baseY = mod.y;
+
+    const onMove = (moveEv) => {
+      moveModule(moduleId, baseX + (moveEv.clientX - startX), baseY + (moveEv.clientY - startY));
+    };
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
+  const toggleMute = async () => {
+    try {
+      await engine.ensureStarted();
+      const next = !muted();
+      setMuted(next);
+      engine.setMuted(next);
+      setStatus(next ? "Global muted" : "Global audio live");
+    } catch (error) {
+      setStatus(`Audio start failed: ${error.message}`);
+    }
+  };
+
+  const ensureAudioLive = async () => {
+    await engine.ensureStarted();
+    if (muted()) {
+      setMuted(false);
+      engine.setMuted(false);
+    }
+  };
+
+  const runMainPreset = async () => {
+    if (busyPreset()) return;
+    setBusyPreset(true);
+    addMessage({ role: "user", type: "text", text: "Add seven oscillators tuned to this frequency range and add a filter." });
+    setTyping(true);
+    setStatus("Agent is preparing a patch...");
+
+    try {
+      await ensureAudioLive();
+      await sleep(900);
+
+      const mixer = getModuleById("layer_mixer");
+      const filter = addModule("filter", 330, 210, "cluster_filter", { cutoff: 780, resonance: 3.2, type: 0 });
+      const lfo = addModule("lfo", 305, 90, "cutoff_lfo", { rate: 0.19, depth: 300 });
+      addConnection(lfo.id, "cv_out", filter.id, "cutoff_cv");
+
+      const min = 72;
+      const max = 550;
+      for (let i = 0; i < 7; i++) {
+        const freq = min + ((max - min) / 6) * i;
+        const osc = addModule(
+          "oscillator",
+          42 + (i % 4) * 74,
+          72 + Math.floor(i / 4) * 124,
+          `osc_${i + 1}`,
+          { frequency: Math.round(freq), amplitude: 0.12, waveform: 1 }
+        );
+        addConnection(osc.id, "audio_out", filter.id, "audio_in");
+      }
+      if (mixer) addConnection(filter.id, "audio_out", mixer.id, "in_1");
+
+      addMessage({
+        role: "assistant",
+        type: "cmd",
+        text: [
+          "add filter cluster_filter cutoff=780 resonance=3.2",
+          "add lfo cutoff_lfo rate=0.19 depth=300",
+          "patch cutoff_lfo.cv_out -> cluster_filter.cutoff_cv",
+          "add osc_1..osc_7 frequency=72..550 amplitude=0.12 waveform=saw",
+          "patch osc_*.audio_out -> cluster_filter.audio_in",
+          "patch cluster_filter.audio_out -> layer_mixer.in_1",
+        ].join("\n"),
+      });
+      addMessage({
+        role: "assistant",
+        type: "text",
+        text: "Patch applied. You can now right-click in the graph to add any other Drone module primitive and patch it manually.",
+      });
+      setStatus("Preset loaded • Drag modules and patch via IN/OUT ports");
+    } catch (error) {
+      addMessage({ role: "assistant", type: "text", text: `Could not start audio: ${error.message}` });
+      setStatus(`Audio error: ${error.message}`);
+    } finally {
+      setTyping(false);
+      setBusyPreset(false);
+    }
+  };
+
+  const runMovementPreset = async () => {
+    if (busyPreset()) return;
+    setBusyPreset(true);
+    addMessage({ role: "user", type: "text", text: "Add a movement layer with noise, delay, and saturation." });
+    setTyping(true);
+    setStatus("Applying movement layer...");
+
+    try {
+      await ensureAudioLive();
+      await sleep(850);
+      const mixer = getModuleById("layer_mixer");
+      const noise = addModule("noise_gen", 110, 300, "grain_noise", { level: 0.16 });
+      const sat = addModule("tape_saturation", 260, 316, "tape_drive", { drive: 3, mix: 0.8 });
+      const delay = addModule("delay_line", 430, 328, "wash_delay", { time: 420, feedback: 0.42, mix: 0.45 });
+      addConnection(noise.id, "audio_out", sat.id, "audio_in");
+      addConnection(sat.id, "audio_out", delay.id, "audio_in");
+      if (mixer) addConnection(delay.id, "audio_out", mixer.id, "in_2");
+
+      addMessage({
+        role: "assistant",
+        type: "cmd",
+        text: [
+          "add noise_gen grain_noise level=0.16",
+          "add tape_saturation tape_drive drive=3.0 mix=0.8",
+          "add delay_line wash_delay time=420 feedback=0.42 mix=0.45",
+          "patch grain_noise.audio_out -> tape_drive.audio_in",
+          "patch tape_drive.audio_out -> wash_delay.audio_in",
+          "patch wash_delay.audio_out -> layer_mixer.in_2",
+        ].join("\n"),
+      });
+      addMessage({ role: "assistant", type: "text", text: "Movement layer is active on mixer channel 2." });
+      setStatus("Movement patch active • use mixer levels to balance");
+    } catch (error) {
+      addMessage({ role: "assistant", type: "text", text: `Could not apply movement layer: ${error.message}` });
+      setStatus(`Audio error: ${error.message}`);
+    } finally {
+      setTyping(false);
+      setBusyPreset(false);
+    }
+  };
+
+  const openContextMenu = (ev) => {
+    ev.preventDefault();
+    const rect = graphRef.getBoundingClientRect();
+    setContextMenu({
+      x: ev.clientX - rect.left,
+      y: ev.clientY - rect.top,
+      worldX: ev.clientX - rect.left,
+      worldY: ev.clientY - rect.top,
+    });
+  };
+
+  const addFromContext = async (type) => {
+    const menu = contextMenu();
+    setContextMenu(null);
+    if (!menu) return;
+    try {
+      await ensureAudioLive();
+      addModule(type, menu.worldX - 90, menu.worldY - 22);
+      setStatus(`Added ${type}`);
+    } catch (error) {
+      setStatus(`Audio start failed: ${error.message}`);
+    }
+  };
+
+  const onGraphMove = (ev) => {
+    const rect = graphRef.getBoundingClientRect();
+    setPointer({ x: ev.clientX - rect.left, y: ev.clientY - rect.top });
+  };
+
+  const drawCables = () => {
+    if (!cableCanvas || !graphRef) return;
+    const ctx = cableCanvas.getContext("2d");
+    const w = cableCanvas.width;
+    const h = cableCanvas.height;
+    ctx.clearRect(0, 0, w, h);
+    ctx.lineCap = "round";
+
+    const rect = graphRef.getBoundingClientRect();
+    const t = performance.now() / 1000;
+
+    const drawConnection = (fromEl, toEl, idx) => {
+      const fr = fromEl.getBoundingClientRect();
+      const tr = toEl.getBoundingClientRect();
+      const x1 = fr.left - rect.left + fr.width / 2;
+      const y1 = fr.top - rect.top + fr.height / 2;
+      const x2 = tr.left - rect.left + tr.width / 2;
+      const y2 = tr.top - rect.top + tr.height / 2;
+      const dx = Math.abs(x2 - x1);
+      const cp1x = x1 + Math.max(30, dx * 0.38);
+      const cp2x = x2 - Math.max(30, dx * 0.38);
+
+      ctx.beginPath();
+      ctx.strokeStyle = "rgba(68, 221, 68, 0.35)";
+      ctx.lineWidth = 5;
+      ctx.moveTo(x1, y1);
+      ctx.bezierCurveTo(cp1x, y1, cp2x, y2, x2, y2);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.setLineDash([6, 11]);
+      ctx.lineDashOffset = -((t * 40 + idx * 17) % 17);
+      ctx.strokeStyle = "rgba(68, 221, 68, 0.95)";
+      ctx.lineWidth = 1.4;
+      ctx.moveTo(x1, y1);
+      ctx.bezierCurveTo(cp1x, y1, cp2x, y2, x2, y2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    };
+
+    connections().forEach((conn, idx) => {
+      const fromEl = portRefs.get(`${conn.fromModuleId}:output:${conn.fromPort}`);
+      const toEl = portRefs.get(`${conn.toModuleId}:input:${conn.toPort}`);
+      if (!fromEl || !toEl) return;
+      drawConnection(fromEl, toEl, idx);
+    });
+
+    const pending = pendingOutput();
+    if (pending) {
+      const fromEl = portRefs.get(`${pending.moduleId}:output:${pending.portName}`);
+      if (fromEl) {
+        const p = pointer();
+        const pseudo = {
+          getBoundingClientRect: () => ({
+            left: rect.left + p.x - 4,
+            top: rect.top + p.y - 4,
+            width: 8,
+            height: 8,
+          }),
+        };
+        drawConnection(fromEl, pseudo, 999);
+      }
+    }
+
+    cableRaf = requestAnimationFrame(drawCables);
+  };
+
+  const drawScope = () => {
+    if (!scopeCanvas) return;
+    const ctx = scopeCanvas.getContext("2d");
+    const w = scopeCanvas.width;
+    const h = scopeCanvas.height;
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = "rgba(255,255,255,0.02)";
+    ctx.fillRect(0, 0, w, h);
+
+    const analyser = engine.getAnalyser();
+    if (analyser) {
+      const data = new Uint8Array(analyser.fftSize);
+      analyser.getByteTimeDomainData(data);
+      ctx.strokeStyle = "rgba(68, 221, 68, 0.35)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let i = 0; i < data.length; i++) {
+        const x = (i / (data.length - 1)) * w;
+        const y = (data[i] / 255) * h;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    scopeRaf = requestAnimationFrame(drawScope);
+  };
+
+  const resizeCanvases = () => {
+    if (!graphRef || !cableCanvas || !scopeCanvas) return;
+    const w = graphRef.clientWidth;
+    const h = graphRef.clientHeight;
+    const dpr = window.devicePixelRatio || 1;
+    cableCanvas.width = Math.max(1, Math.floor(w * dpr));
+    cableCanvas.height = Math.max(1, Math.floor(h * dpr));
+    cableCanvas.style.width = `${w}px`;
+    cableCanvas.style.height = `${h}px`;
+    scopeCanvas.width = Math.max(1, Math.floor(w * dpr));
+    scopeCanvas.height = Math.max(1, Math.floor(h * dpr));
+    scopeCanvas.style.width = `${w}px`;
+    scopeCanvas.style.height = `${h}px`;
+    const cctx = cableCanvas.getContext("2d");
+    const sctx = scopeCanvas.getContext("2d");
+    cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  };
+
+  onMount(() => {
+    const mixer = {
+      id: "layer_mixer",
+      type: "mixer",
+      name: "layer_mixer",
+      x: 368,
+      y: 380,
+      ports: pickPorts("mixer"),
+      params: defaultParams("mixer"),
+    };
+    setModules([mixer]);
+    engine.addModule(mixer);
+    engine.setMuted(true);
+
+    const closeMenu = () => setContextMenu(null);
+    window.addEventListener("click", closeMenu);
+    onCleanup(() => window.removeEventListener("click", closeMenu));
+
+    resizeCanvases();
+    resizeObserver = new ResizeObserver(resizeCanvases);
+    if (graphRef) resizeObserver.observe(graphRef);
+
+    cableRaf = requestAnimationFrame(drawCables);
+    scopeRaf = requestAnimationFrame(drawScope);
+
+    onCleanup(() => {
+      cancelAnimationFrame(cableRaf);
+      cancelAnimationFrame(scopeRaf);
+      resizeObserver?.disconnect();
+      engine.dispose();
+    });
+  });
+
+  createEffect(() => {
+    messages().length;
+    typing();
+    if (!chatRef) return;
+    queueMicrotask(() => {
+      chatRef.scrollTop = chatRef.scrollHeight;
+    });
+  });
+
+  const sliderEntries = (mod) => {
+    const defs = MODULE_PARAMS[mod.type] || {};
+    const entries = Object.entries(defs);
+    const max = mod.type === "mixer" ? 8 : 4;
+    return entries.slice(0, max);
+  };
+
+  return html`
+    <button
+      class=${() => `dcx-global-mute${muted() ? " is-muted" : ""}`}
+      onClick=${toggleMute}
+      title="Global audio mute"
+    >${() => (muted() ? "Global Mute" : "Global Live")}</button>
+
+    <div class="dcx-shell">
+      <section class="dcx-left">
+        <header class="dcx-left-head">Agent Conversation</header>
+        <div class="dcx-chat" ref=${(el) => { chatRef = el; }}>
+          <${For} each=${messages}>
+            ${(msg) => html`
+              <div class=${() => {
+                const base = "dcx-msg";
+                if (msg.type === "cmd") return `${base} dcx-msg--cmd`;
+                return msg.role === "user" ? `${base} dcx-msg--user` : `${base} dcx-msg--assistant`;
+              }}>${msg.text}</div>
+            `}
+          </${For}>
+          <${Show} when=${typing}>
+            <div class="dcx-typing"><span></span><span></span><span></span></div>
+          </${Show}>
+        </div>
+        <footer class="dcx-actions">
+          <button class="dcx-action-btn" disabled=${busyPreset} onClick=${runMainPreset}>
+            Add seven oscillators tuned to this frequency range and add a filter
+          </button>
+          <button class="dcx-action-btn" disabled=${busyPreset} onClick=${runMovementPreset}>
+            Add Noise + Delay Layer
+          </button>
+        </footer>
+      </section>
+
+      <section class="dcx-right">
+        <div class="dcx-right-head">Layer: main • right-click to add module</div>
+        <div
+          class="dcx-graph"
+          ref=${(el) => { graphRef = el; }}
+          onContextMenu=${openContextMenu}
+          onMouseMove=${onGraphMove}
+          onClick=${() => setPendingOutput(null)}
+        >
+          <canvas class="dcx-scope" ref=${(el) => { scopeCanvas = el; }}></canvas>
+          <canvas class="dcx-cables" ref=${(el) => { cableCanvas = el; }}></canvas>
+
+          <${For} each=${modules}>
+            ${(seedMod) => {
+              const mod = () => getModuleById(seedMod.id) || seedMod;
+              return html`
+              <div
+                class=${() => `dcx-module${mod().type === "mixer" ? " dcx-module--mixer" : ""}`}
+                data-module-id=${seedMod.id}
+                style=${() => `left:${mod().x}px;top:${mod().y}px;`}
+              >
+                <div class="dcx-module-head" onMouseDown=${(ev) => onModuleDragStart(ev, seedMod.id)}>
+                  <span class="type-module dcx-module-name">${() => mod().name}</span>
+                  <span class="type-tag dcx-module-type">${() => mod().type}</span>
+                </div>
+
+                <${Show} when=${() => mod().ports.outputs.length > 0}>
+                  <div class="dcx-ports">
+                    <${For} each=${() => mod().ports.outputs}>
+                      ${(port) => html`
+                        <button
+                          class=${() => {
+                            const pending = pendingOutput();
+                            const active = pending && pending.moduleId === seedMod.id && pending.portName === port;
+                            return `dcx-port dcx-port--output${active ? " dcx-port--active" : ""}`;
+                          }}
+                          title=${`output: ${port}`}
+                          onClick=${(ev) => { ev.stopPropagation(); onPortClick(seedMod.id, "output", port); }}
+                        >
+                          OUT ${port}
+                          <span
+                            class="port-dot output"
+                            data-module-id=${seedMod.id}
+                            data-port=${port}
+                            ref=${(el) => setPortRef(seedMod.id, "output", port, el)}
+                          ></span>
+                        </button>
+                      `}
+                    </${For}>
+                  </div>
+                </${Show}>
+
+                <${Show} when=${() => sliderEntries(mod()).length > 0}>
+                  <div class="dcx-module-params">
+                    <${For} each=${() => sliderEntries(mod())}>
+                      ${(entry) => {
+                        const [param, [min, max, , step]] = entry;
+                        return html`
+                          <label class="dcx-param">
+                            <span class="type-label data-label">${param}</span>
+                            <span class="type-value data-value">${() => Number(mod().params[param] ?? 0).toFixed(2)}</span>
+                            <input
+                              type="range"
+                              min=${min}
+                              max=${max}
+                              step=${step || 0.01}
+                              value=${() => mod().params[param]}
+                              onInput=${(ev) => {
+                                ev.stopPropagation();
+                                updateModuleParam(seedMod.id, param, Number(ev.currentTarget.value));
+                              }}
+                            />
+                          </label>
+                        `;
+                      }}
+                    </${For}>
+                  </div>
+                </${Show}>
+
+                <${Show} when=${() => mod().ports.inputs.length > 0}>
+                  <div class="dcx-ports">
+                    <${For} each=${() => mod().ports.inputs}>
+                      ${(port) => html`
+                        <button
+                          class="dcx-port dcx-port--input"
+                          title=${`input: ${port}`}
+                          onClick=${(ev) => { ev.stopPropagation(); onPortClick(seedMod.id, "input", port); }}
+                        >
+                          IN ${port}
+                          <span
+                            class="port-dot input"
+                            data-module-id=${seedMod.id}
+                            data-port=${port}
+                            ref=${(el) => setPortRef(seedMod.id, "input", port, el)}
+                          ></span>
+                        </button>
+                      `}
+                    </${For}>
+                  </div>
+                </${Show}>
+              </div>
+            `;
+            }}
+          </${For}>
+
+          <${Show} when=${contextMenu}>
+              <div class="dcx-context" style=${() => `left:${contextMenu()?.x ?? 0}px;top:${contextMenu()?.y ?? 0}px;`} onClick=${(ev) => ev.stopPropagation()}>
+                <${For} each=${MODULE_CATALOG}>
+                  ${(type) => html`<button onClick=${() => addFromContext(type)}>${type}</button>`}
+                </${For}>
+              </div>
+          </${Show}>
+        </div>
+        <div class="dcx-status">${status}</div>
+      </section>
+    </div>
+  `;
+}
+
+const root = document.getElementById("drone-interactive-root");
+if (root) render(() => html`<${App} />`, root);

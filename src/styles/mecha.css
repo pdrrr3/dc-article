@@ -1,0 +1,391 @@
+/* Mecha V2 - Procedural SVG Mecha/Wireframe Theme */
+
+@import "tailwindcss";
+
+@theme {
+  /* Mecha Wireframe Palette */
+  --color-mecha-bg: #050505;
+  --color-mecha-bg-secondary: #0a0a0f;
+  --color-mecha-panel: #0a0a0f;
+  --color-mecha-border: #1a1a1a;
+  --color-mecha-border-hover: #2d2d3a;
+  
+  /* Wireframe Colors */
+  --color-wireframe-primary: #ffffff;
+  --color-wireframe-dim: rgba(255, 255, 255, 0.5);
+  --color-wireframe-subtle: rgba(255, 255, 255, 0.3);
+  
+  /* Green Labels */
+  --color-label-primary: #44dd44;
+  --color-label-glow: rgba(68, 221, 68, 0.5);
+  --color-label-dim: rgba(68, 221, 68, 0.3);
+  
+  /* Energy Flow */
+  --color-energy-primary: #44dd44;
+  --color-energy-bright: #88ff88;
+  --color-energy-cyan: #44ffdd;
+  
+  /* Alert/Status */
+  --color-status-online: #44dd44;
+  --color-status-offline: #ff4444;
+  --color-status-warning: #ffaa00;
+  
+  /* Tech Text */
+  --color-text-tech: #a0a0b0;
+  --color-text-tech-dim: #606070;
+  
+  /* Bitmap/Retro Fonts */
+  --font-bitmap: 'LinLibertine', 'FragmentMono', monospace;
+  --font-mono: 'FragmentMono', monospace;
+  --font-tech: 'LinLibertine', 'FragmentMono', monospace;
+}
+
+/* Global bitmap font override */
+body, html {
+  font-family: 'FragmentMono', monospace !important;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+  text-rendering: optimizeSpeed;
+}
+
+/* Base mecha styles */
+.mecha-root {
+  background: var(--color-mecha-bg);
+  color: var(--color-text-tech);
+  font-family: var(--font-bitmap);
+}
+
+/* Bitmap text utility */
+.font-bitmap {
+  font-family: 'USB8', 'FragmentMono', monospace;
+  font-size: 0.7em;
+  letter-spacing: 0.1em;
+}
+
+.font-vt323 {
+  font-family: 'VT323', monospace;
+  letter-spacing: 0.05em;
+}
+
+/* Panel styling */
+.mecha-panel {
+  background: var(--color-mecha-bg-secondary);
+  border: 1px solid var(--color-mecha-border);
+}
+
+.mecha-panel:hover {
+  border-color: var(--color-mecha-border-hover);
+}
+
+/* Wireframe SVG Styles */
+.mecha-svg {
+  background: var(--color-mecha-bg);
+}
+
+.mecha-svg line,
+.mecha-svg path,
+.mecha-svg circle,
+.mecha-svg rect,
+.mecha-svg polyline,
+.mecha-svg polygon {
+  stroke: var(--color-wireframe-primary);
+  fill: none;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Hierarchy - thick outer hull */
+.mecha-svg [stroke-width="2"],
+.mecha-svg [stroke-width="3"] {
+  stroke: var(--color-wireframe-primary);
+}
+
+/* Internal detail - thin */
+.mecha-svg [stroke-width="0.5"],
+.mecha-svg [stroke-width="1"] {
+  stroke: var(--color-wireframe-dim);
+}
+
+/* Green accent for active elements */
+.mecha-svg [stroke="#44dd44"] {
+  stroke: var(--color-label-primary);
+}
+
+/* Glow filter for active parts */
+.mecha-svg [filter="url(#mecha-glow)"] {
+  filter: drop-shadow(0 0 4px var(--color-label-glow));
+}
+
+/* Energy flow animation */
+@keyframes energy-flow {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+
+.mecha-energy-line {
+  stroke: var(--color-energy-primary);
+  stroke-width: 2;
+  stroke-dasharray: 4 4;
+  animation: energy-flow 1s linear infinite;
+}
+
+/* Draw-in animation for new parts */
+@keyframes draw-in {
+  from {
+    stroke-dasharray: 200;
+    stroke-dashoffset: 200;
+  }
+  to {
+    stroke-dasharray: 200;
+    stroke-dashoffset: 0;
+  }
+}
+
+.mecha-part-new {
+  animation: draw-in 0.8s ease-out forwards;
+}
+
+/* Port markers */
+.mecha-port {
+  cursor: crosshair;
+  transition: opacity 0.2s;
+}
+
+.mecha-port:hover {
+  opacity: 1 !important;
+}
+
+.mecha-port-input {
+  fill: var(--color-mecha-bg);
+  stroke: var(--color-label-primary);
+  stroke-width: 1;
+}
+
+.mecha-port-input:hover circle:first-child {
+  r: 6;
+  stroke-width: 2;
+}
+
+.mecha-port-output {
+  fill: var(--color-mecha-bg);
+  stroke: var(--color-label-primary);
+  stroke-width: 1;
+}
+
+.mecha-port-output:hover rect:first-child {
+  width: 10;
+  height: 10;
+  x: -5;
+  y: -5;
+}
+
+/* Labels with leader lines */
+.mecha-label {
+  fill: var(--color-label-primary);
+  font-family: var(--font-tech);
+  font-size: 10px;
+  text-shadow: 0 0 4px var(--color-label-glow);
+}
+
+.mecha-label-leader {
+  stroke: var(--color-label-dim);
+  stroke-width: 0.5;
+  fill: none;
+}
+
+/* Grid background */
+.mecha-grid {
+  stroke: rgba(255, 255, 255, 0.03);
+  stroke-width: 0.5;
+}
+
+/* Selection indicator */
+.mecha-selected {
+  stroke: var(--color-label-primary);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  animation: dash-rotate 2s linear infinite;
+}
+
+@keyframes dash-rotate {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+
+/* Patch from indicator */
+.mecha-patch-source {
+  stroke: var(--color-label-primary);
+  stroke-width: 2;
+  animation: pulse-ring 1s ease-in-out infinite;
+}
+
+@keyframes pulse-ring {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+/* Status indicators */
+.mecha-status-online {
+  color: var(--color-status-online);
+}
+
+.mecha-status-offline {
+  color: var(--color-status-offline);
+}
+
+.mecha-status-warning {
+  color: var(--color-status-warning);
+}
+
+/* Buttons */
+.mecha-button {
+  background: transparent;
+  border: 1px solid var(--color-label-primary);
+  color: var(--color-label-primary);
+  font-family: var(--font-tech);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mecha-button:hover {
+  background: var(--color-label-primary);
+  color: var(--color-mecha-bg);
+}
+
+.mecha-button-danger {
+  border-color: var(--color-status-offline);
+  color: var(--color-status-offline);
+}
+
+.mecha-button-danger:hover {
+  background: var(--color-status-offline);
+  color: var(--color-mecha-bg);
+}
+
+/* Modal */
+.mecha-modal-backdrop {
+  background: rgba(0, 0, 0, 0.9);
+}
+
+.mecha-modal-content {
+  background: var(--color-mecha-bg-secondary);
+  border: 1px solid var(--color-mecha-border);
+}
+
+/* Complexity meter */
+.mecha-complexity-bar {
+  width: 4px;
+  height: 12px;
+  background: var(--color-mecha-border);
+  transition: background 0.3s;
+}
+
+.mecha-complexity-bar.active {
+  background: var(--color-label-primary);
+  box-shadow: 0 0 4px var(--color-label-glow);
+}
+
+/* Part type colors (subtle variations) */
+.mecha-part-core [stroke-width="2"] {
+  stroke: #ffffff;
+}
+
+.mecha-part-propulsion [stroke-width="2"] {
+  stroke: #ffffff;
+}
+
+.mecha-part-filtering [stroke-width="2"] {
+  stroke: #ffffff;
+}
+
+.mecha-part-percussion [stroke-width="2"] {
+  stroke: #ffffff;
+}
+
+/* Scrollbar styling */
+.mecha-viewport::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.mecha-viewport::-webkit-scrollbar-track {
+  background: var(--color-mecha-bg);
+}
+
+.mecha-viewport::-webkit-scrollbar-thumb {
+  background: var(--color-mecha-border);
+  border-radius: 4px;
+}
+
+.mecha-viewport::-webkit-scrollbar-thumb:hover {
+  background: var(--color-mecha-border-hover);
+}
+
+/* Settings sliders */
+.mecha-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 3px;
+  background: #1a1a1a;
+  outline: none;
+  border-radius: 0;
+}
+
+.mecha-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 8px;
+  height: 14px;
+  background: #44dd44;
+  border: none;
+  cursor: pointer;
+}
+
+.mecha-slider::-moz-range-thumb {
+  width: 8px;
+  height: 14px;
+  background: #44dd44;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.mecha-slider::-webkit-slider-runnable-track {
+  height: 3px;
+  background: #1a1a1a;
+}
+
+.mecha-slider::-moz-range-track {
+  height: 3px;
+  background: #1a1a1a;
+  border: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .mecha-label {
+    font-size: 8px;
+  }
+  
+  .mecha-button {
+    font-size: 8px;
+    padding: 6px 12px;
+  }
+}
