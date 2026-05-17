@@ -9,6 +9,8 @@ import ChatPanel from './components/ChatPanel';
 export default function App() {
   const [bootFailed, setBootFailed] = createSignal(false);
   const [addModuleLayer, setAddModuleLayer] = createSignal(null);
+  const [chatWidth, setChatWidth] = createSignal(30);
+  let splitContainerEl;
 
   onMount(async () => {
     const ok = await boot();
@@ -31,6 +33,27 @@ export default function App() {
     }
   };
 
+  const onSplitterDown = (e) => {
+    e.preventDefault();
+    if (!splitContainerEl) return;
+    const containerEl = splitContainerEl;
+    const onMove = (ev) => {
+      const rect = containerEl.getBoundingClientRect();
+      const pct = ((ev.clientX - rect.left) / rect.width) * 100;
+      setChatWidth(Math.max(15, Math.min(75, pct)));
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
+
   return (
     <div
       class="dc-engine relative flex flex-col bg-bg-primary bg-dotted border border-border overflow-hidden"
@@ -38,8 +61,11 @@ export default function App() {
       onKeyDown={onKeyDown}
       tabIndex={-1}
     >
-      <div class="flex-1 flex relative items-stretch min-h-0">
-        <ChatPanel />
+      <div ref={(el) => (splitContainerEl = el)} class="flex-1 flex relative items-stretch min-h-0">
+        <div class="flex-shrink-0 h-full overflow-hidden" style={`width:${chatWidth()}%`}>
+          <ChatPanel />
+        </div>
+        <div class="dc-splitter flex-shrink-0 h-full" onMouseDown={onSplitterDown} />
         <div class="dc-layers-scroll flex-1 relative min-w-0 overflow-y-auto overflow-x-auto">
           <Show when={bootFailed()}>
             <div class="p-6 data-label text-base">Engine failed to start.</div>
@@ -68,7 +94,7 @@ export default function App() {
 function LayersPanel(props) {
   const layers = () => Object.values(session.layers || {});
   return (
-    <div class="flex flex-col min-h-full" style="gap:0;padding-bottom:120px">
+    <div class="flex flex-col min-h-full" style="gap:0;padding:16px 20px 120px 20px">
       <For each={layers()}>
         {(layer) => (
           <LayerCard layer={layer} onAddModule={props.onAddModule} showBorder={false} onReorder={() => {}} />

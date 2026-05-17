@@ -17,10 +17,11 @@ function showTooltip(x, y, text) {
     tooltipEl = document.createElement('div');
     tooltipEl.style.cssText =
       'position:fixed;pointer-events:none;z-index:9999;padding:2px 6px;' +
-      'background:var(--color-bg-secondary,#1a1a1d);' +
-      'border:0.5px solid var(--color-border,rgba(255,255,255,0.2));' +
-      'color:var(--color-text-primary,#e8ecea);' +
+      'background:var(--color-bg-secondary);' +
+      'border:0.5px solid var(--color-border);' +
+      'color:var(--color-text-primary);' +
       'font:10px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;' +
+      'letter-spacing:0.1em;' +
       'font-variant-numeric:tabular-nums;' +
       'white-space:nowrap;transform:translate(10px,10px)';
     document.body.appendChild(tooltipEl);
@@ -62,7 +63,20 @@ export default function Knob(props) {
   const clampedValue = () => Math.max(0, Math.min(1, props.value));
   const valueAngle = () => startAngle + clampedValue() * sweep;
 
-  const stroke = () => (hovering() || dragging() ? '#ccddee' : '#8899aa');
+  const stroke = () => (hovering() || dragging() ? 'var(--color-label)' : 'var(--color-text-primary)');
+
+  // Indicator notch — short radial tick from arc inward, pointing at the current value
+  const notch = () => {
+    const a = toRad(valueAngle());
+    const outerR = r();
+    const innerR = Math.max(1, r() - 4);
+    return {
+      x1: cx() + outerR * Math.cos(a),
+      y1: cy() + outerR * Math.sin(a),
+      x2: cx() + innerR * Math.cos(a),
+      y2: cy() + innerR * Math.sin(a),
+    };
+  };
 
   const onMouseDown = (e) => {
     e.preventDefault();
@@ -111,19 +125,27 @@ export default function Knob(props) {
       <path
         d={arcPath(startAngle, endAngle)}
         fill="none"
-        stroke="rgba(136,153,170,0.25)"
-        stroke-width="3.5"
-        stroke-linecap="round"
+        stroke="var(--color-border)"
+        stroke-width="3"
+        stroke-linecap="butt"
       />
       {clampedValue() > 0.005 && (
         <path
           d={arcPath(startAngle, valueAngle())}
           fill="none"
           stroke={stroke()}
-          stroke-width="3.5"
-          stroke-linecap="round"
+          stroke-width="3"
+          stroke-linecap="butt"
         />
       )}
+      {/* radial indicator notch — easier to read at extremes than arc alone */}
+      <line
+        x1={notch().x1} y1={notch().y1}
+        x2={notch().x2} y2={notch().y2}
+        stroke={stroke()}
+        stroke-width="1"
+        stroke-linecap="butt"
+      />
     </svg>
   );
 }

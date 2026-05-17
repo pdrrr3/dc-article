@@ -3,10 +3,19 @@ import Knob from './Knob';
 import { meterLevels } from '../store';
 
 // ── Palette ──────────────────────────────────────────────────
-const CURVE = '#8899aa';
-const CURVE_FILL = 'rgba(136,153,170,0.18)';
-const GRID = 'rgba(136,153,170,0.12)';
-const GRID_STRONG = 'rgba(136,153,170,0.22)';
+// Light-TUI tokens. The curve reads as the primary "ink" of the
+// editor (text-primary alpha); grid lines are derived from the
+// shared --color-border. Reference markers / selected states use
+// the accent green token via `var(--color-label)`.
+const CURVE = 'rgba(26,26,26,0.78)';            // --color-text-primary @ 78%
+const CURVE_FILL = 'rgba(26,26,26,0.06)';       // soft wash under the curve
+const GRID = 'rgba(0,0,0,0.07)';                // minor grid
+const GRID_STRONG = 'rgba(0,0,0,0.14)';         // major grid / unity line
+const TICK_LABEL = 'rgba(0,0,0,0.42)';          // axis tick text
+const NODE_FILL = 'var(--color-bg-secondary)';  // draggable node center
+const ACCENT = 'var(--color-label)';            // reference markers
+const FADER_TRACK = 'rgba(0,0,0,0.08)';
+const METER_TRACK = 'rgba(0,0,0,0.04)';
 
 // ── Shared helpers ───────────────────────────────────────────
 const logNorm = (v, min, max) => {
@@ -50,19 +59,22 @@ const LABELS = {
 const labelFor = (k) => LABELS[k] || (k.length > 6 ? k.slice(0, 6) : k);
 
 // ── KnobCell: knob + labels + drag tooltip ─────────────────
+// Uses the standard .type-port (FragmentMono 10px) on the label and
+// .type-value-like tabular-nums on the readout. The cramped 8/9px
+// override is gone — KnobPanel/grid sizing handles the density.
 function KnobCell(props) {
   return (
-    <div class="flex flex-col items-center" style="min-width:44px;gap:1px">
+    <div class="flex flex-col items-center" style="min-width:48px;gap:2px">
       <Knob
         value={props.value}
         onChange={props.onChange}
         defaultValue={props.defaultValue}
         display={props.display}
       />
-      <span class="type-port text-text-secondary" style="font-size:8px;letter-spacing:0.02em">{props.label}</span>
+      <span class="type-port" style="color:var(--color-text-secondary)">{props.label}</span>
       <span
-        class="type-port text-label"
-        style="font-variant-numeric:tabular-nums;font-size:9px"
+        class="type-port"
+        style="color:var(--color-label);font-variant-numeric:tabular-nums"
       >
         {props.display}
       </span>
@@ -99,7 +111,7 @@ function LogFreqGrid(props) {
             />
             <text
               x={x(f)} y={props.padY + props.h - 2}
-              fill="rgba(136,153,170,0.5)"
+              fill={TICK_LABEL}
               font-size="7"
               font-family="ui-monospace,monospace"
               text-anchor="middle"
@@ -122,16 +134,16 @@ function GraphNode(props) {
         onMouseDown={props.onMouseDown}
       />
       <circle
-        cx={props.cx} cy={props.cy} r="5"
-        fill="#141414"
-        stroke={CURVE}
-        stroke-width="1.5"
+        cx={props.cx} cy={props.cy} r="4.5"
+        fill={NODE_FILL}
+        stroke={ACCENT}
+        stroke-width="1.25"
         style="pointer-events:none"
       />
       <circle
         cx={props.cx} cy={props.cy} r="8"
         fill="none"
-        stroke={CURVE}
+        stroke={ACCENT}
         stroke-width="1"
         opacity="0"
         style="pointer-events:none"
@@ -157,18 +169,36 @@ const WAVE_TYPES = [
 
 function ButtonRow(props) {
   return (
-    <div class="flex justify-center gap-1">
+    <div class="flex justify-center gap-1 me-button-row">
       <For each={props.options}>
-        {(o) => (
-          <button
-            class="type-port px-2 py-0.5 border-none cursor-pointer"
-            style={`font-size:9px;background:${props.value === o.id ? CURVE : 'transparent'};color:${props.value === o.id ? '#141414' : 'rgba(136,153,170,0.7)'};border:0.5px solid ${GRID_STRONG}`}
-            onClick={() => props.onChange(o.id)}
-          >
-            {o.label}
-          </button>
-        )}
+        {(o) => {
+          const selected = () => props.value === o.id;
+          return (
+            <button
+              class="type-button me-btn cursor-pointer"
+              data-selected={selected() ? 'true' : 'false'}
+              onClick={() => props.onChange(o.id)}
+            >
+              {o.label}
+            </button>
+          );
+        }}
       </For>
+      <style>{`
+        .me-btn {
+          padding: 2px 8px;
+          background: transparent;
+          color: var(--color-text-muted);
+          border: 0.5px solid var(--color-border);
+          line-height: 1.2;
+        }
+        .me-btn:hover { color: var(--color-text-secondary); border-color: rgba(0,0,0,0.22); }
+        .me-btn[data-selected="true"] {
+          color: var(--color-bg-secondary);
+          background: var(--color-accent);
+          border-color: var(--color-accent);
+        }
+      `}</style>
     </div>
   );
 }
@@ -247,7 +277,7 @@ export function FilterEditor(props) {
   };
 
   return (
-    <div class="px-2 py-2">
+    <div class="py-1">
       <svg viewBox={`0 0 ${W} ${H}`} class="block w-full" style="cursor:crosshair;height:auto">
         <LogFreqGrid padX={PAD} padY={PAD} w={GW} h={GH} />
         <line x1={PAD} y1={PAD + GH * 0.31} x2={PAD + GW} y2={PAD + GH * 0.31} stroke={GRID} stroke-width="0.5" />
@@ -269,7 +299,10 @@ export function FilterEditor(props) {
           <ButtonRow options={FILTER_TYPES} value={ftype()} onChange={(id) => props.onParam('type', id)} />
         </div>
       </Show>
-      <div class="flex justify-around mt-2 px-1">
+      <div
+        class="grid mt-2 px-1"
+        style="grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 6px;justify-items:center"
+      >
         <KnobCell
           label="Freq"
           value={logNorm(cutoff(), F_MIN, F_MAX)}
@@ -361,7 +394,7 @@ export function OscillatorEditor(props) {
     `${previewPath()} L${PAD + GW},${PAD + GH / 2} L${PAD},${PAD + GH / 2} Z`);
 
   return (
-    <div class="px-2 py-2">
+    <div class="py-1">
       <svg viewBox={`0 0 ${W} ${H}`} class="block w-full" style="height:auto">
         <line x1={PAD} y1={PAD + GH / 2} x2={PAD + GW} y2={PAD + GH / 2} stroke={GRID_STRONG} stroke-width="0.5" />
         <line x1={PAD} y1={PAD + GH * 0.1} x2={PAD + GW} y2={PAD + GH * 0.1} stroke={GRID} stroke-width="0.5" stroke-dasharray="2,3" />
@@ -381,7 +414,10 @@ export function OscillatorEditor(props) {
           <ButtonRow options={WAVE_TYPES} value={wave()} onChange={(id) => props.onParam('waveform', id)} />
         </div>
       </Show>
-      <div class="flex justify-around mt-2 px-1 flex-wrap" style="gap:4px">
+      <div
+        class="grid mt-2 px-1"
+        style="grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 6px;justify-items:center"
+      >
         <KnobCell
           label="Freq"
           value={logNorm(freq(), F_MIN, F_MAX)}
@@ -485,7 +521,7 @@ export function LfoEditor(props) {
     `${previewPath()} L${PAD + GW},${PAD + GH / 2} L${PAD},${PAD + GH / 2} Z`);
 
   return (
-    <div class="px-2 py-2">
+    <div class="py-1">
       <svg viewBox={`0 0 ${W} ${H}`} class="block w-full" style="height:auto">
         <line x1={PAD} y1={PAD + GH / 2} x2={PAD + GW} y2={PAD + GH / 2} stroke={GRID_STRONG} stroke-width="0.5" />
         <path d={fillPath()} fill={CURVE_FILL} />
@@ -503,7 +539,10 @@ export function LfoEditor(props) {
           <ButtonRow options={WAVE_TYPES} value={wave()} onChange={(id) => props.onParam('waveform', id)} />
         </div>
       </Show>
-      <div class="flex justify-around mt-2 px-1">
+      <div
+        class="grid mt-2 px-1"
+        style="grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 6px;justify-items:center"
+      >
         <KnobCell
           label="Rate"
           value={logNorm(Math.max(0.01, rate()), 0.01, 50)}
@@ -591,7 +630,7 @@ export function CompressorEditor(props) {
   const dbX = (db) => PAD + ((db - DB_LO) / (DB_HI - DB_LO)) * GW;
 
   return (
-    <div class="px-2 py-2">
+    <div class="py-1">
       <svg viewBox={`0 0 ${W} ${H}`} class="block w-full" style="cursor:default;height:auto">
         {/* dB grid */}
         <For each={[-40, -20, 0]}>
@@ -629,7 +668,7 @@ export function CompressorEditor(props) {
       </svg>
       <div
         class="grid mt-2 px-1"
-        style="grid-template-columns:repeat(3,minmax(0,1fr));gap:4px 6px;justify-items:center"
+        style="grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 6px;justify-items:center"
       >
         <KnobCell
           label="Thrsh"
@@ -716,8 +755,8 @@ export function ChannelStrip(props) {
   };
 
   return (
-    <div class="px-2 py-2">
-      <div class="flex justify-between items-end gap-1" style="height:120px">
+    <div class="py-1">
+      <div class="flex justify-between items-end gap-1" style="height:124px">
         <For each={levelKeys()}>
           {(key, i) => {
             const def = props.paramDefs[key];
@@ -726,39 +765,35 @@ export function ChannelStrip(props) {
             const inactive = () => props.inactiveChannels?.has(i()) ?? false;
             return (
               <div
-                class="flex flex-col items-center"
-                style={`flex:1;opacity:${inactive() ? 0.3 : 1}`}
-                title={inactive() ? 'No input connected' : `channel ${i() + 1}`}
+                class="flex flex-col items-center min-w-0"
+                style={`flex:1;opacity:${inactive() ? 0.4 : 1};filter:${inactive() ? 'grayscale(1)' : 'none'}`}
+                title={inactive() ? 'No input connected' : `ch ${i() + 1} — ${cur().toFixed(2)}`}
               >
                 <div class="flex items-end gap-0.5">
                   <div
                     class="relative"
-                    style="width:10px;height:92px;background:rgba(136,153,170,0.2);cursor:ns-resize"
+                    style={`width:8px;height:88px;background:${FADER_TRACK};border:0.5px solid var(--color-border);cursor:ns-resize`}
                     onMouseDown={(e) => onFaderDown(key, def, e)}
                     onDblClick={() => props.onParam(key, def[2])}
                     onContextMenu={(e) => { e.preventDefault(); props.onParam(key, def[2]); }}
                   >
                     <div
                       class="absolute bottom-0 left-0 w-full pointer-events-none"
-                      style={`height:${pct() * 100}%;background:${CURVE}`}
+                      style={`height:${pct() * 100}%;background:var(--color-warning)`}
                     />
                   </div>
                   {/* Peak meter column */}
                   <div
                     class="relative"
-                    style="width:3px;height:92px;background:rgba(136,153,170,0.1);pointer-events:none"
+                    style={`width:2px;height:88px;background:${METER_TRACK};pointer-events:none`}
                   >
                     <div
                       class="absolute bottom-0 left-0 w-full"
-                      style={`height:${meterFor(i()) * 100}%;background:${CURVE};transition:height 0.08s linear`}
+                      style={`height:${meterFor(i()) * 100}%;background:var(--color-label);transition:height 0.08s linear`}
                     />
                   </div>
                 </div>
-                <span class="type-port text-text-secondary mt-1" style="font-size:8px">{i() + 1}</span>
-                <span
-                  class="type-port text-label"
-                  style="font-size:8px;font-variant-numeric:tabular-nums"
-                >{cur().toFixed(2)}</span>
+                <span class="type-port mt-1.5" style="color:var(--color-text-muted);font-size:9px">{i() + 1}</span>
               </div>
             );
           }}
@@ -793,7 +828,7 @@ export function DelayEditor(props) {
     ms < 1000 ? `${ms.toFixed(0)} ms` : `${(ms / 1000).toFixed(2)} s`;
 
   return (
-    <div class="px-2 py-2">
+    <div class="py-1">
       <svg viewBox={`0 0 ${W} ${H}`} class="block w-full" style="height:auto">
         <line
           x1={PAD} y1={PAD + GH / 2}
@@ -818,7 +853,10 @@ export function DelayEditor(props) {
           </For>
         </g>
       </svg>
-      <div class="flex justify-around mt-2 px-1 flex-wrap" style="gap:4px">
+      <div
+        class="grid mt-2 px-1"
+        style="grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 6px;justify-items:center"
+      >
         <KnobCell
           label="Time"
           value={logNorm(Math.max(0.1, time()), 0.1, 5000)}
@@ -916,7 +954,7 @@ export function ShaperEditor(props) {
   };
 
   return (
-    <div class="px-2 py-2">
+    <div class="py-1">
       <svg viewBox={`0 0 ${W} ${H}`} class="block w-full" style="height:auto">
         {/* Quadrant guides */}
         <line x1={PAD + GW / 2} y1={PAD} x2={PAD + GW / 2} y2={PAD + GH} stroke={GRID} stroke-width="0.5" stroke-dasharray="2,3" />
@@ -932,12 +970,12 @@ export function ShaperEditor(props) {
           stroke-linejoin="round"
         />
         <Show when={liveDot()}>
-          <circle cx={liveDot().cx} cy={liveDot().cy} r="3" fill="#ffdd88" />
+          <circle cx={liveDot().cx} cy={liveDot().cy} r="3" fill={ACCENT} />
         </Show>
       </svg>
       <div
         class="grid mt-2 px-1"
-        style="grid-template-columns:repeat(3,minmax(0,1fr));gap:4px 6px;justify-items:center"
+        style="grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 6px;justify-items:center"
       >
         <For each={Object.entries(props.paramDefs || {})}>
           {([k, def]) => {
@@ -1003,13 +1041,13 @@ export function KnobPanel(props) {
   };
 
   return (
-    <div class="px-2 py-2">
+    <div class="py-1">
       <Show
         when={groups()}
         fallback={
           <div
             class="grid px-1"
-            style="grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;justify-items:center"
+            style="grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 6px;justify-items:center"
           >
             <For each={allKeys()}>{(k) => renderKnob(k)}</For>
           </div>
@@ -1020,16 +1058,16 @@ export function KnobPanel(props) {
             const present = () => keys.filter((k) => k in (props.paramDefs || {}));
             return (
               <Show when={present().length > 0}>
-                <div class="mb-2">
+                <div class="mb-3">
                   <div
-                    class="type-port text-text-secondary mb-1 px-1"
-                    style="font-size:8px;letter-spacing:0.18em;opacity:0.7"
+                    class="type-tag mb-2 px-1"
+                    style="color:var(--color-text-muted)"
                   >
                     {section.toUpperCase()}
                   </div>
                   <div
                     class="grid px-1"
-                    style="grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;justify-items:center"
+                    style="grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 6px;justify-items:center"
                   >
                     <For each={present()}>{(k) => renderKnob(k)}</For>
                   </div>
@@ -1047,8 +1085,8 @@ export function KnobPanel(props) {
           }
         >
           <div
-            class="grid px-1 pt-1"
-            style="grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;justify-items:center;border-top:0.5px solid rgba(136,153,170,0.12)"
+            class="grid px-1 pt-2"
+            style="grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 6px;justify-items:center;border-top:0.5px solid var(--color-border)"
           >
             <For
               each={allKeys().filter(

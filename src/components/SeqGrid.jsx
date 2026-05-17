@@ -133,27 +133,35 @@ export default function SeqGrid(props) {
     return '100%';
   };
 
-  const stepClass = () => 'aspect-square cursor-pointer relative min-w-0 transition-colors duration-75 select-none';
-  const stepStyle = (step) => `background:${step?.gate ? 'var(--color-label)' : 'var(--color-bg-primary)'}; outline:1px solid #000;outline-offset:-1px`;
+  const stepClass = (n) => {
+    // Bar separators: extra left margin every 4 steps (skip first in row)
+    const inRow = n % COLS;
+    const sep = inRow > 0 && inRow % 4 === 0 ? ' seq-cell-bar' : '';
+    return 'seq-cell cursor-pointer relative min-w-0 transition-colors duration-75 select-none' + sep;
+  };
+  const stepStyle = (step) => `background:${step?.gate ? 'var(--color-label)' : 'var(--color-bg-tertiary)'}; outline:0.5px solid var(--color-border); outline-offset:-0.5px; height:18px`;
 
   return (
     <div data-no-ctx-menu class="px-2 pt-6 pb-1" style={`width:${cardWidth()}`}>
+      <style>{`
+        .seq-cell-bar { margin-left: 3px; }
+      `}</style>
       <For each={Array.from({ length: numRows() }, (_, r) => r)}>
         {(r) => {
           const rowStart = r * COLS;
           const rowCount = Math.min(COLS, visLen() - rowStart);
           return (
             <div class="flex flex-col gap-0.5 mb-1">
-              <div class="grid gap-0.5" style={`grid-template-columns:repeat(${rowCount},1fr)`}>
+              <div class="grid gap-0.5" style={`grid-template-columns:repeat(${rowCount},minmax(0,1fr))`}>
                 <For each={Array.from({ length: rowCount }, (_, i) => rowStart + i)}>
                   {(abs) => (
-                    <div class="text-xs text-border text-center leading-none">
+                    <div class="type-port text-text-muted text-center leading-none">
                       {abs % 4 === 0 ? String(abs / 4 + 1) : ''}
                     </div>
                   )}
                 </For>
               </div>
-              <div class="grid gap-0.5" style={`grid-template-columns:repeat(${rowCount},1fr)`}>
+              <div class="grid gap-0.5" style={`grid-template-columns:repeat(${rowCount},minmax(0,1fr))`}>
                 <For each={Array.from({ length: rowCount }, (_, i) => rowStart + i)}>
                   {(n) => {
                     const step = () => steps()[n] || { gate:false, pitch:0, velocity:1, length:0.5, probability:1, p_locks:[] };
@@ -164,7 +172,7 @@ export default function SeqGrid(props) {
                     return (
                       <div
                         ref={el => { stepEls[n] = el; }}
-                        class={stepClass()}
+                        class={stepClass(n)}
                         style={stepStyle(step())}
                         onMouseDown={(e) => onStepMouseDown(e, n)}
                         onMouseEnter={() => onStepMouseEnter(n)}
@@ -172,16 +180,16 @@ export default function SeqGrid(props) {
                         title={`step ${n + 1}${hasPlocks() ? ' [plocked]' : ''}`}
                       >
                         <div
-                          class={`absolute left-0.5 w-0.5 ${step()?.gate ? 'bg-black/30' : 'bg-warning/60'}`}
+                          class={`absolute left-0.5 w-0.5 ${step()?.gate ? 'bg-white/50' : 'bg-warning/50'}`}
                           style={`bottom:1px;height:calc(${velH()} - 2px)`}
                         />
                         <div
-                          class={`absolute h-0.5 ${pitch() >= 0 ? 'left-1' : 'right-1'} ${step()?.gate ? 'bg-black/40' : 'bg-text-primary'}`}
+                          class={`absolute h-0.5 ${pitch() >= 0 ? 'left-1' : 'right-1'} ${step()?.gate ? 'bg-white/70' : 'bg-text-secondary'}`}
                           style={`bottom:2px;${pitch() >= 0 ? 'right' : 'left'}:${Math.round((1 - pipW()) * 100)}%;opacity:${step()?.gate ? 1 : 0}`}
                         />
                         {/* P-lock dot */}
                         <Show when={hasPlocks()}>
-                          <div class="absolute pointer-events-none" style="width:4px;height:4px;top:2px;right:2px;background:#000" />
+                          <div class="absolute pointer-events-none" style="width:3px;height:3px;top:2px;right:2px;background:var(--color-accent)" />
                         </Show>
                       </div>
                     );
@@ -248,7 +256,7 @@ function StepPopover(props) {
 
   return (
     <div
-      class="seq-popover-panel fixed z-[500] bg-bg-primary border border-border p-2.5 flex flex-col gap-1.5 min-w-[250px] max-h-[90vh] overflow-y-auto shadow-[0_4px_20px_rgba(0,0,0,0.9)]"
+      class="seq-popover-panel fixed z-[500] bg-bg-secondary border border-border p-2.5 flex flex-col gap-1.5 min-w-[250px] max-h-[90vh] overflow-y-auto"
       style={`left:${x}px;top:${y}px`}
     >
       <div class="section-title">STEP {props.stepIdx + 1}</div>
@@ -349,11 +357,11 @@ function DrumParamOverrides(props) {
               {/* Lock indicator dot */}
               <div
                 class="w-1 h-1 flex-shrink-0 rounded-none"
-                style={`background:${locked() ? '#7799bb' : '#333'};border:1px solid ${locked() ? '#7799bb' : '#555'}`}
+                style={`background:${locked() ? 'var(--color-accent)' : 'transparent'};border:1px solid ${locked() ? 'var(--color-accent)' : 'var(--color-border)'}`}
               />
               <span
-                class="data-label flex-shrink-0 text-base"
-                style={`width:60px;color:${locked() ? '#7799bb' : 'var(--color-text-secondary)'}`}
+                class="type-label flex-shrink-0"
+                style={`width:60px;color:${locked() ? 'var(--color-accent)' : 'var(--color-text-secondary)'}`}
               >{pName}:</span>
               <input
                 type="range"
@@ -361,18 +369,18 @@ function DrumParamOverrides(props) {
                 step={(max - min) / 200}
                 value={syncedVal()}
                 class="flex-1"
-                style={locked() ? 'accent-color:#7799bb' : 'opacity:0.5'}
+                style={locked() ? 'accent-color:var(--color-accent)' : 'opacity:0.5'}
                 onInput={(e) => onChange(parseFloat(e.target.value))}
               />
               <span
-                class="tabular-nums text-base flex-shrink-0"
-                style={`width:38px;text-align:right;color:${locked() ? '#7799bb' : 'var(--color-text-secondary)'}`}
+                class="type-value flex-shrink-0"
+                style={`width:38px;text-align:right;color:${locked() ? 'var(--color-accent)' : 'var(--color-text-secondary)'}`}
               >{fmtVal(syncedVal())}</span>
               {/* × only visible when armed */}
               <button
                 onClick={onClear}
-                class="text-base bg-transparent border-none cursor-pointer leading-none flex-shrink-0 transition-opacity"
-                style={`color:#7799bb;opacity:${locked() ? 1 : 0};pointer-events:${locked() ? 'auto' : 'none'};width:12px`}
+                class="type-button bg-transparent border-none cursor-pointer leading-none flex-shrink-0 transition-opacity"
+                style={`color:var(--color-accent);opacity:${locked() ? 1 : 0};pointer-events:${locked() ? 'auto' : 'none'};width:12px`}
                 title="clear override"
               >×</button>
             </div>

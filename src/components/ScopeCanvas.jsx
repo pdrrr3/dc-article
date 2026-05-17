@@ -21,6 +21,13 @@ export default function ScopeCanvas(props) {
     if (sock) sock.close();
   });
 
+  function readToken(name, fallback) {
+    try {
+      const v = getComputedStyle(canvasEl).getPropertyValue(name).trim();
+      return v || fallback;
+    } catch { return fallback; }
+  }
+
   function openSocket() {
     if (sock) sock.close();
     sock = new WebSocket(wsUrl(`/scope/${props.moduleId}`));
@@ -41,6 +48,10 @@ export default function ScopeCanvas(props) {
       const aligned = buf.slice(1);
       const samples = new Float32Array(aligned, 0, nSamples);
 
+      const traceAudio = readToken('--color-label', '#0f7a32');
+      const traceCv    = readToken('--color-text-secondary', '#666');
+      const gridColor  = 'rgba(0,0,0,0.08)';
+
       ctx.clearRect(0, 0, W, H);
 
       if (classId === 0x00) {
@@ -50,10 +61,18 @@ export default function ScopeCanvas(props) {
           if (samples[i - 1] < 0 && samples[i] >= 0) { trigger = i; break; }
         }
 
-        ctx.strokeStyle = '#44dd44';
+        // Zero line first so trace sits on top
+        ctx.strokeStyle = gridColor;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, H / 2);
+        ctx.lineTo(W, H / 2);
+        ctx.stroke();
+
+        ctx.strokeStyle = traceAudio;
         ctx.lineWidth = 1.5;
-        ctx.shadowColor = '#44dd44';
-        ctx.shadowBlur = 3;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
         ctx.beginPath();
         const drawSamples = Math.min(nSamples - trigger, W);
         for (let i = 0; i < drawSamples; i++) {
@@ -62,15 +81,6 @@ export default function ScopeCanvas(props) {
           const y = H / 2 - s * (H / 2 - 4);
           if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         }
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-
-        // Zero line
-        ctx.strokeStyle = '#333344';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(0, H / 2);
-        ctx.lineTo(W, H / 2);
         ctx.stroke();
       } else {
         // CV scrolling timeline
@@ -83,19 +93,8 @@ export default function ScopeCanvas(props) {
         const total = Math.min(cvWritePos, cvHistory.length);
         const startIdx = cvWritePos - total;
 
-        ctx.strokeStyle = '#7799bb';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        for (let col = 0; col < W; col++) {
-          const ringIdx = (startIdx + col) % cvHistory.length;
-          const s = cvHistory[ringIdx];
-          const y = H / 2 - s * (H / 2 - 4);
-          if (col === 0) ctx.moveTo(col, y); else ctx.lineTo(col, y);
-        }
-        ctx.stroke();
-
-        // Grid lines
-        ctx.strokeStyle = '#333344';
+        // Grid lines first
+        ctx.strokeStyle = gridColor;
         ctx.lineWidth = 1;
         for (const level of [0.5, 0, -0.5]) {
           const y = H / 2 - level * (H / 2 - 4);
@@ -104,6 +103,19 @@ export default function ScopeCanvas(props) {
           ctx.lineTo(W, y);
           ctx.stroke();
         }
+
+        ctx.strokeStyle = traceCv;
+        ctx.lineWidth = 1.25;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        for (let col = 0; col < W; col++) {
+          const ringIdx = (startIdx + col) % cvHistory.length;
+          const s = cvHistory[ringIdx];
+          const y = H / 2 - s * (H / 2 - 4);
+          if (col === 0) ctx.moveTo(col, y); else ctx.lineTo(col, y);
+        }
+        ctx.stroke();
       }
     };
 
@@ -111,9 +123,9 @@ export default function ScopeCanvas(props) {
       if (!canvasEl.isConnected) return;
       const ctx = canvasEl.getContext('2d');
       ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
-      ctx.fillStyle = '#666';
-      ctx.font = '16px VT323, monospace';
-      ctx.fillText('disconnected', 6, canvasEl.height / 2 + 4);
+      ctx.fillStyle = readToken('--color-text-muted', '#999');
+      ctx.font = '20px FragmentMono, monospace';
+      ctx.fillText('disconnected', 8, canvasEl.height / 2 + 6);
     };
   }
 
@@ -121,9 +133,9 @@ export default function ScopeCanvas(props) {
     <div class="px-2 pt-1 pb-1.5 border-t border-border">
       <canvas
         ref={canvasEl}
-        class="block w-full h-[60px] bg-bg-primary border border-border"
+        class="block w-full h-[60px] bg-bg-layer border border-border"
       />
-      <div class="data-label text-right mt-0.5 text-sm">
+      <div class="type-label text-text-muted text-right mt-1">
         scope
       </div>
     </div>

@@ -107,12 +107,17 @@ function BarSlider(props) {
       ref={barRef}
       onMouseDown={onMouseDown}
       onDblClick={(e) => { e.preventDefault(); if (props.defaultValue !== undefined) props.onValue(props.defaultValue); }}
-      class="relative w-full cursor-ew-resize h-2"
-      style="background:rgba(136,153,170,0.25)"
+      class="relative w-full cursor-ew-resize h-2 dc-bar"
+      style="background:var(--color-bg-tertiary);border:0.5px solid var(--color-border)"
     >
-      <div 
-        class="absolute top-0 left-0 h-full pointer-events-none bg-label"
-        style={`width:${pct() * 100}%`}
+      <div
+        class="absolute top-0 left-0 h-full pointer-events-none"
+        style={`width:${pct() * 100}%;background:var(--color-label);opacity:${dragging() ? 1 : 0.85}`}
+      />
+      {/* tick marker at the fill edge — reads as TUI caret */}
+      <div
+        class="absolute top-0 pointer-events-none"
+        style={`left:calc(${pct() * 100}% - 0.5px);width:1px;height:100%;background:var(--color-text-primary)`}
       />
     </div>
   );
@@ -190,8 +195,13 @@ export default function ModuleCard(props) {
 
   const isInst = () => ['sequencer','global_seq','kick_drum','snare','hihat','bass_line'].includes(typeName());
   const isAdsr = () => typeName() === 'adsr';
+  const isMixer = () => ['mixer', 'cv_mixer'].includes(typeName());
   const hasCustomEditor = () => CUSTOM_EDITORS[typeName()] !== undefined;
-  const cardWidth = () => isInst() ? '290px' : (isAdsr() || hasCustomEditor()) ? '200px' : '190px';
+  const cardWidth = () =>
+    isInst() ? '320px' :
+    isMixer() ? '240px' :
+    (isAdsr() || hasCustomEditor()) ? '220px' :
+    '200px';
   const cardMinWidth = () => cardWidth();
 
   const borderClass = () => {
@@ -204,8 +214,8 @@ export default function ModuleCard(props) {
     <div
       data-module-id={mod().id}
       data-layer-id={layer().id}
-      class={`flex-shrink-0 flex flex-col border border-border px-0.5 pt-1 pb-0.5 bg-bg-secondary self-start`}
-      style={`width:${cardWidth()};min-width:${cardMinWidth()};border-width:0.5px`}
+      class={`flex-shrink-0 flex flex-col border border-border bg-bg-secondary self-start overflow-hidden`}
+      style={`width:${cardWidth()};min-width:${cardMinWidth()};max-width:${cardWidth()};border-width:0.5px;padding:14px`}
     >
       {/* Section title — white uppercase with underline, like PARTS DATA */}
       <div
@@ -272,22 +282,24 @@ export default function ModuleCard(props) {
           window.addEventListener('mouseup', onUp);
         }}
       >
-        <div class="flex items-center justify-between">
-          <span class="type-module border-none m-0 pb-0 text-text-primary">
+        <div class="flex items-center justify-between gap-2">
+          <span class="type-module border-none m-0 pb-0 text-text-primary truncate">
             {isBus() ? 'Main Mixer' : mod().name}
           </span>
           <Show when={!isBus()}>
             <button
               onClick={deleteModule}
-              class="text-base bg-transparent border-none cursor-pointer px-0.5 py-0 leading-none opacity-40 hover:opacity-100 hover:text-danger transition-all text-text-secondary"
-            >✕</button>
+              aria-label="Delete module"
+              class="type-button bg-transparent border-none cursor-pointer leading-none opacity-40 hover:opacity-100 hover:text-danger transition-colors text-text-secondary"
+              style="padding:2px 4px"
+            >[x]</button>
           </Show>
         </div>
         <Show when={!isBus()}>
           <div class="flex items-center gap-2">
             <span class="type-tag text-label">{typeName()}</span>
             <Show when={isInst()}>
-              <span class="type-label text-label leading-none opacity-60" style="position:relative;top:1px">INST</span>
+              <span class="type-tag text-label leading-none" style="opacity:0.7">[INST]</span>
             </Show>
           </div>
         </Show>
@@ -420,8 +432,8 @@ function PortSection(props) {
 // ── Individual port row: OUT / port_name / [■] ───────────────
 function PortRow(props) {
   const isOutput = () => props.dir === 'output';
-  const dotBorder = () => props.connected ? '#0d8a3d' : '#a8a8a0';
-  const dotFill = () => props.connected ? '#0d8a3d' : 'transparent';
+  const dotBorder = () => props.connected ? 'var(--color-accent)' : 'var(--color-text-muted)';
+  const dotFill = () => props.connected ? 'var(--color-accent)' : 'transparent';
   const isDropTarget = () => {
     const d = dragCable();
     return d && props.dir === 'input' && d.hoverModuleId === props.moduleId && d.hoverPort === props.index;
@@ -492,16 +504,21 @@ function PortRow(props) {
     window.addEventListener('mouseup', onUp);
   };
 
+  const arrow = () => isOutput() ? '>' : '<';
+
   return (
     <div
-      class="flex items-center gap-2 cursor-pointer"
+      class="flex items-center gap-2 cursor-pointer dc-port-row"
       onClick={props.onClick}
       title={`${props.dir}: ${props.portName}`}
     >
-      <span class="type-port text-label leading-none" style="min-width:20px">
+      <span class="type-port text-label leading-none" style="min-width:24px">
         {props.showLabel ? props.dirLabel : ''}
       </span>
-      <span class="type-port data-label leading-none truncate flex-1 italic">
+      <span class="type-port text-text-muted leading-none" style="width:8px">
+        {arrow()}
+      </span>
+      <span class="type-port data-label leading-none truncate flex-1">
         {props.portName}
       </span>
       <div
@@ -509,7 +526,7 @@ function PortRow(props) {
         classList={{ [props.dir]: true }}
         data-port={props.portName}
         data-module-id={props.moduleId}
-        style={`width:10px;height:10px;border:1px solid ${isDropTarget() ? '#1aa650' : dotBorder()};background:${isDropTarget() ? '#0d8a3d' : dotFill()}`}
+        style={`width:10px;height:10px;border:1px solid ${isDropTarget() ? 'var(--color-success)' : dotBorder()};background:${isDropTarget() ? 'var(--color-accent)' : dotFill()};transition:background 80ms,border-color 80ms`}
         onMouseDown={onDotMouseDown}
       />
     </div>

@@ -158,3 +158,60 @@ input[type="text"]:focus {
 @keyframes drone-spin {
   to { transform: rotate(360deg); }
 }
+
+/* draggable column splitter between chat and layers panel */
+.dc-splitter {
+  width: 1px;
+  background: var(--color-border);
+  cursor: col-resize;
+  position: relative;
+  z-index: 30;
+}
+.dc-splitter::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -4px;
+  right: -4px;
+}
+.dc-splitter:hover {
+  background: var(--color-text-secondary);
+}
+
+/* module enter/exit animation */
+.dcmod-enter-active,
+.dcmod-exit-active {
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+.dcmod-enter,
+.dcmod-exit-to {
+  opacity: 0;
+  transform: translateY(-2px);
+}
+.dcmod-enter-to,
+.dcmod-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* chat message enter — subtle fade + slight rise */
+@keyframes dc-msg-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.dc-msg-in {
+  animation: dc-msg-in 220ms ease both;
+}
+
+/* blinking caret in chat prompt */
+@keyframes dc-caret-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.dc-caret {
+  display: inline-block;
+  margin-left: 2px;
+  color: var(--color-label);
+  animation: dc-caret-blink 1s steps(1) infinite;
+}

@@ -1,4 +1,4 @@
-import { createSignal, For, Show } from 'solid-js';
+import { createSignal, createEffect, onCleanup, For, Show } from 'solid-js';
 import { session, pushLog } from '../store';
 import { engine, ensureAudio } from '../engine';
 
@@ -32,7 +32,7 @@ const JOURNEY = [
   },
   // 1 — eleven oscillators with envelopes in polyrhythm
   {
-    prompt: 'add eleven oscillators (600–15000 Hz), each with its own envelope, gated in polyrhythm',
+    prompt: 'add eleven oscillators (120–2000 Hz), each with its own envelope, gated in polyrhythm',
     status: 'placing oscillators + envelopes…',
     done: 'eleven voices laid down, gates running in polyrhythm.',
     run: async (layerId) => {
@@ -41,7 +41,7 @@ const JOURNEY = [
       const periods = [3, 4, 5, 7, 6, 8, 5, 9, 4, 11, 7];
       for (let i = 0; i < N; i++) {
         const t = i / (N - 1);
-        const freq = Math.round(600 * Math.pow(15000 / 600, t));
+        const freq = Math.round(120 * Math.pow(2000 / 120, t));
         const osc = engine.addModule(layerId, { type: 'oscillator', name: `osc_${i + 1}` });
         const env = engine.addModule(layerId, { type: 'adsr',       name: `env_${i + 1}` });
         const vca = engine.addModule(layerId, { type: 'vca',        name: `vca_${i + 1}` });
@@ -220,21 +220,48 @@ export default function ChatPanel() {
   const nextStep = () => JOURNEY[stepIdx()];
   const journeyDone = () => stepIdx() >= JOURNEY.length;
 
+  // Typewriter effect for the pending prompt — direct DOM textContent
+  // updates via ref so we don't trigger SolidJS re-renders every tick.
+  let typedEl;
+  createEffect(() => {
+    if (journeyDone()) return;
+    const target = nextStep()?.prompt || '';
+    if (typedEl) typedEl.textContent = '';
+    let timer;
+    const startDelay = setTimeout(() => {
+      let i = 0;
+      timer = setInterval(() => {
+        i++;
+        if (typedEl) typedEl.textContent = target.slice(0, i);
+        if (i >= target.length) clearInterval(timer);
+      }, 35);
+    }, 600);
+    onCleanup(() => { clearTimeout(startDelay); clearInterval(timer); });
+  });
+  const clearTyped = () => { if (typedEl) typedEl.textContent = ''; };
+
   const scrollToBottom = () => queueMicrotask(() => { if (scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight; });
+
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
   const sendNext = async () => {
     if (busy() || journeyDone()) return;
     const step = nextStep();
     setBusy(true);
+    clearTyped();
     setHistory((h) => [...h, { kind: 'user', text: step.prompt }]);
     scrollToBottom();
     try {
       await ensureAudio();
       const lid = firstLayerId();
       if (!lid) throw new Error('no layer');
+      await wait(450);
       setHistory((h) => [...h, { kind: 'status', text: step.status }]);
       scrollToBottom();
-      await step.run(lid);
+      const runP = step.run(lid);
+      // Ensure the status line sits on screen for a beat even if step.run is fast.
+      await Promise.all([runP, wait(700)]);
+      await wait(350);
       setHistory((h) => [...h, { kind: 'assistant', text: step.done }]);
       pushLog('sys', `journey: ${step.prompt}`);
       setStepIdx((i) => i + 1);
@@ -247,52 +274,51 @@ export default function ChatPanel() {
   };
 
   return (
-    <aside
-      class="flex flex-col h-full border-r border-border bg-bg-primary flex-shrink-0"
-      style="width:520px;min-width:480px"
-    >
+    <aside class="flex flex-col h-full border-r border-border bg-bg-primary w-full">
       <div
         ref={(el) => (scrollEl = el)}
-        class="flex-1 overflow-y-auto px-10 pt-10 pb-6 flex flex-col gap-8"
+        class="flex-1 overflow-y-auto flex flex-col gap-4"
+        style="padding:16px 20px 12px 20px"
       >
         <For each={history()}>
           {(msg) => (
-            <Show when={msg.kind === 'user'} fallback={
-              <Show when={msg.kind === 'status'} fallback={
-                <div class="self-start max-w-[88%] border border-border bg-bg-secondary text-text-primary px-5 py-4 text-sm leading-relaxed">
+            <Show when={msg.kind === 'status'} fallback={
+              <Show when={msg.kind === 'user'} fallback={
+                <div class="dc-msg-in self-start max-w-[85%] text-sm leading-relaxed text-text-primary">
                   {msg.text}
                 </div>
               }>
-                <div class="self-start max-w-[88%] text-text-secondary text-sm leading-relaxed italic px-1">
+                <div class="dc-msg-in self-end max-w-[85%] text-sm leading-relaxed text-text-primary text-right">
                   {msg.text}
                 </div>
               </Show>
             }>
-              <div
-                class="self-end max-w-[75%] px-5 py-4 text-sm leading-relaxed"
-                style="background:#1f2d3f;color:#fafaf6"
-              >{msg.text}</div>
+              <div class="dc-msg-in self-start text-sm leading-relaxed text-text-muted italic">
+                <span class="select-none mr-2">·</span>{msg.text}
+              </div>
             </Show>
           )}
         </For>
       </div>
 
-      <footer class="px-10 pt-4 pb-10">
+      <footer style="padding:8px 20px 16px 20px">
         <Show
           when={!journeyDone()}
           fallback={
-            <div class="text-text-muted text-sm leading-relaxed py-4 italic">
-              journey complete. tweak knobs and ports on the right.
+            <div class="text-sm leading-relaxed text-text-muted italic">
+              <span class="select-none mr-2">·</span>journey complete. tweak knobs and ports on the right.
             </div>
           }
         >
           <button
             disabled={busy()}
             onClick={sendNext}
-            class="w-full text-left text-sm border border-border bg-bg-secondary px-5 py-4 flex gap-3 items-start hover:border-label disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            class="w-full text-left bg-transparent border-0 p-0 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors group"
           >
-            <span class="text-text-muted flex-shrink-0 leading-relaxed">›</span>
-            <span class="text-text-primary leading-relaxed">{nextStep().prompt}</span>
+            <span class="text-sm leading-relaxed text-text-muted group-hover:text-text-primary transition-colors">
+              <span ref={(el) => (typedEl = el)} />
+              <span class="dc-caret">▍</span>
+            </span>
           </button>
         </Show>
       </footer>

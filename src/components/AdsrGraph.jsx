@@ -1,10 +1,13 @@
 import { createSignal, createMemo, For } from 'solid-js';
 import Knob from './Knob';
 
-const CURVE = '#8899aa';
-const CURVE_FILL = 'rgba(136,153,170,0.18)';
-const GRID = 'rgba(136,153,170,0.12)';
-const GRID_STRONG = 'rgba(136,153,170,0.22)';
+const CURVE = 'var(--color-label)';
+const CURVE_FILL = 'rgba(15,122,50,0.10)';
+const GRID = 'rgba(0,0,0,0.06)';
+const GRID_STRONG = 'rgba(0,0,0,0.12)';
+const HANDLE_FILL = 'var(--color-bg-secondary)';
+const HANDLE_STROKE = 'rgba(0,0,0,0.45)';
+const HANDLE_ACTIVE = 'var(--color-accent)';
 
 /**
  * ADSR Envelope Graph with draggable breakpoints and knobs.
@@ -106,41 +109,33 @@ export default function AdsrGraph(props) {
   // Log-time grid ticks at 0.01, 0.1, 1, 10s
   const timeTicks = [0.01, 0.1, 1, 10];
 
-  const Node = (propsN) => (
-    <g>
-      <circle
-        cx={propsN.cx}
-        cy={propsN.cy}
-        r="10"
-        fill="transparent"
-        style={`cursor:${propsN.cursor}`}
-        onMouseDown={(e) => onPointDown(propsN.param, e)}
-        onMouseEnter={() => setHovered(propsN.param)}
-        onMouseLeave={() => setHovered(null)}
-      />
-      <circle
-        cx={propsN.cx}
-        cy={propsN.cy}
-        r="5"
-        fill="#141414"
-        stroke={CURVE}
-        stroke-width="1.5"
-        style="pointer-events:none"
-      />
-      {(hovered() === propsN.param || dragging() === propsN.param) && (
+  const Node = (propsN) => {
+    const active = () => hovered() === propsN.param || dragging() === propsN.param;
+    return (
+      <g>
         <circle
           cx={propsN.cx}
           cy={propsN.cy}
-          r="8"
-          fill="none"
-          stroke={CURVE}
+          r="10"
+          fill="transparent"
+          style={`cursor:${propsN.cursor}`}
+          onMouseDown={(e) => onPointDown(propsN.param, e)}
+          onMouseEnter={() => setHovered(propsN.param)}
+          onMouseLeave={() => setHovered(null)}
+        />
+        <rect
+          x={propsN.cx - 3}
+          y={propsN.cy - 3}
+          width="6"
+          height="6"
+          fill={active() ? HANDLE_ACTIVE : HANDLE_FILL}
+          stroke={active() ? HANDLE_ACTIVE : HANDLE_STROKE}
           stroke-width="1"
-          opacity="0.7"
           style="pointer-events:none"
         />
-      )}
-    </g>
-  );
+      </g>
+    );
+  };
 
   return (
     <div class="px-2 py-2">
@@ -193,8 +188,8 @@ export default function AdsrGraph(props) {
             defaultValue={logNorm(0.01, T_MIN, T_MAX)}
             display={fmtTime(props.attack)}
           />
-          <span class="type-port text-text-secondary" style="font-size:8px">Atck</span>
-          <span class="type-port text-label" style="font-size:9px;font-variant-numeric:tabular-nums">{fmtTime(props.attack)}</span>
+          <span class="type-port text-text-muted">Atck</span>
+          <span class="type-value text-label">{fmtTime(props.attack)}</span>
         </div>
         <div class="flex flex-col items-center" style="gap:1px">
           <Knob
@@ -203,8 +198,8 @@ export default function AdsrGraph(props) {
             defaultValue={logNorm(0.1, T_MIN, T_MAX)}
             display={fmtTime(props.decay)}
           />
-          <span class="type-port text-text-secondary" style="font-size:8px">Dcay</span>
-          <span class="type-port text-label" style="font-size:9px;font-variant-numeric:tabular-nums">{fmtTime(props.decay)}</span>
+          <span class="type-port text-text-muted">Dcay</span>
+          <span class="type-value text-label">{fmtTime(props.decay)}</span>
         </div>
         <div class="flex flex-col items-center" style="gap:1px">
           <Knob
@@ -213,8 +208,8 @@ export default function AdsrGraph(props) {
             defaultValue={0.7}
             display={fmtSus(props.sustain)}
           />
-          <span class="type-port text-text-secondary" style="font-size:8px">Sus</span>
-          <span class="type-port text-label" style="font-size:9px;font-variant-numeric:tabular-nums">{fmtSus(props.sustain)}</span>
+          <span class="type-port text-text-muted">Sus</span>
+          <span class="type-value text-label">{fmtSus(props.sustain)}</span>
         </div>
         <div class="flex flex-col items-center" style="gap:1px">
           <Knob
@@ -223,8 +218,8 @@ export default function AdsrGraph(props) {
             defaultValue={logNorm(0.3, T_MIN, T_MAX)}
             display={fmtTime(props.release)}
           />
-          <span class="type-port text-text-secondary" style="font-size:8px">Rel</span>
-          <span class="type-port text-label" style="font-size:9px;font-variant-numeric:tabular-nums">{fmtTime(props.release)}</span>
+          <span class="type-port text-text-muted">Rel</span>
+          <span class="type-value text-label">{fmtTime(props.release)}</span>
         </div>
       </div>
     </div>

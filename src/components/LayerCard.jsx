@@ -1,4 +1,5 @@
 import { createSignal, createEffect, onCleanup, For, Show } from 'solid-js';
+import { TransitionGroup } from 'solid-transition-group';
 import ModuleCard from './ModuleCard';
 import { scheduleParamPut } from '../ws';
 import { meterLevels } from '../store';
@@ -102,14 +103,8 @@ export default function LayerCard(props) {
     <div class={`${props.showBorder ? 'border-b border-border' : ''} ${menuOpen() ? 'relative z-[500]' : ''}`} data-layer-reorder={layer().id}>
       {/* Section title — like MARIONETTE DATA */}
       <div
-        class="flex items-center justify-between px-12 pt-6 pb-4 select-none sticky top-0 z-20"
+        class="flex items-center justify-between pt-6 pb-4 select-none"
         style="cursor:grab"
-        onClick={(e) => {
-          if (e.defaultPrevented) return;
-          if (editing()) return;
-          if (e.target.closest('[data-no-drag]')) return;
-          setCollapsed(!collapsed());
-        }}
         onMouseDown={(e) => {
           if (e.button !== 0) return;
           if (editing()) return;
@@ -220,7 +215,7 @@ export default function LayerCard(props) {
               }
             }}
           >
-            <circle class="meter-dot-ring" cx="12" cy="12" r="11" fill="#141414" stroke="rgba(255,255,255,0.08)" stroke-width="1" />
+            <circle class="meter-dot-ring" cx="12" cy="12" r="11" fill="var(--color-bg-primary)" stroke="var(--color-border)" stroke-width="1" />
             {!muted() && <circle
               cx="12" cy="12"
               r={Math.max(0.5, Math.min(10, meterLevel() * 10))}
@@ -236,7 +231,7 @@ export default function LayerCard(props) {
               opacity={0.1 + Math.min(1, meterLevel() * 1.3) * 0.9}
               style="transition:r 0.1s ease,fill 0.2s ease,opacity 0.1s ease"
             />}
-            {muted() && <line x1="6" y1="6" x2="18" y2="18" stroke="#fff" stroke-width="1.5" opacity="0.08" />}
+            {muted() && <line x1="6" y1="6" x2="18" y2="18" stroke="var(--color-text-primary)" stroke-width="1.5" opacity="0.4" />}
           </svg>
           <Show when={!editing()}>
             <span class="type-section border-none m-0 pb-0">
@@ -265,26 +260,15 @@ export default function LayerCard(props) {
         </div>
       </div>
 
-      <Show when={!collapsed()}>
-      <div class="flex gap-3 px-12 items-start" style="padding-bottom:24px">
-        {/* Main mixer — sticky left column */}
-        <div class="flex-shrink-0 sticky z-10 self-start" style="top:66px">
-          <For each={modules().filter(m => m.id === layer().mixer_id)}>
+      <div class="flex flex-wrap gap-3 items-start" style="padding-top:16px;padding-bottom:24px">
+        <TransitionGroup name="dcmod">
+          <For each={modules()}>
             {(mod) => (
               <ModuleCard mod={mod} layer={layer()} />
             )}
           </For>
-        </div>
-        {/* Other modules — wrap to the right */}
-        <div class="flex flex-wrap gap-3 items-start flex-1 min-w-0">
-          <For each={modules().filter(m => m.id !== layer().mixer_id)}>
-            {(mod) => (
-              <ModuleCard mod={mod} layer={layer()} />
-            )}
-          </For>
-        </div>
+        </TransitionGroup>
       </div>
-      </Show>
     </div>
   );
 }
