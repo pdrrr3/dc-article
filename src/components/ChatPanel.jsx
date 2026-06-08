@@ -332,9 +332,11 @@ export default function ChatPanel() {
               <button
                 disabled={busy()}
                 onClick={restartJourney}
-                class="w-full text-left border border-border bg-bg-secondary px-3 py-2 text-sm leading-relaxed text-text-primary disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer hover:bg-bg-tertiary transition-colors"
+                class="w-full text-left bg-transparent border-0 p-0 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors group"
               >
-                let's start a new session
+                <span class="text-sm leading-relaxed text-text-muted group-hover:text-text-primary transition-colors">
+                  let's start a new session<span class="dc-caret">▍</span>
+                </span>
               </button>
             </div>
           }
