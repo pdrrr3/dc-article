@@ -1,0 +1,15 @@
+{
+  "name": "dc-wasm",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "dc_wasm_bg.wasm",
+    "dc_wasm.js",
+    "dc_wasm.d.ts"
+  ],
+  "main": "dc_wasm.js",
+  "types": "dc_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

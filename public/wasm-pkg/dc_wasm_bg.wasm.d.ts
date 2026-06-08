@@ -1,0 +1,31 @@
+/* tslint:disable */
+/* eslint-disable */
+export const memory: WebAssembly.Memory;
+export const __wbg_engine_free: (a: number, b: number) => void;
+export const engine_addModule: (a: number, b: number, c: number) => [number, number];
+export const engine_clearPlock: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
+export const engine_connect: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
+export const engine_currentStep: (a: number, b: number, c: number) => number;
+export const engine_disableMeter: (a: number, b: number, c: number) => void;
+export const engine_disconnect: (a: number, b: number, c: number) => void;
+export const engine_enableMeter: (a: number, b: number, c: number) => void;
+export const engine_masterId: (a: number) => [number, number];
+export const engine_meterLevels: (a: number) => [number, number];
+export const engine_moduleTypes: () => [number, number];
+export const engine_new: (a: number) => number;
+export const engine_portsFor: (a: number, b: number) => [number, number];
+export const engine_process: (a: number, b: number, c: number, d: any, e: number, f: number, g: any) => void;
+export const engine_removeModule: (a: number, b: number, c: number) => void;
+export const engine_setBpm: (a: number, b: number) => void;
+export const engine_setParam: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
+export const engine_setPlock: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
+export const engine_setStep: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
+export const _start: () => void;
+export const __wbindgen_free: (a: number, b: number, c: number) => void;
+export const __wbindgen_exn_store: (a: number) => void;
+export const __externref_table_alloc: () => number;
+export const __wbindgen_externrefs: WebAssembly.Table;
+export const __wbindgen_malloc: (a: number, b: number) => number;
+export const __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
+export const __externref_drop_slice: (a: number, b: number) => void;
+export const __wbindgen_start: () => void;
