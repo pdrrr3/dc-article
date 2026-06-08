@@ -61,8 +61,8 @@ export default function App() {
       onKeyDown={onKeyDown}
       tabIndex={-1}
     >
-      <div ref={(el) => (splitContainerEl = el)} class="flex-1 flex relative items-stretch min-h-0">
-        <div class="flex-shrink-0 h-full overflow-hidden" style={`width:${chatWidth()}%`}>
+      <div ref={(el) => (splitContainerEl = el)} class="dc-engine-layout flex-1 flex relative items-stretch min-h-0">
+        <div class="dc-chat-pane flex-shrink-0 h-full overflow-hidden" style={`width:${chatWidth()}%`}>
           <ChatPanel />
         </div>
         <div class="dc-splitter flex-shrink-0 h-full" onMouseDown={onSplitterDown} />
@@ -94,7 +94,7 @@ export default function App() {
 function LayersPanel(props) {
   const layers = () => Object.values(session.layers || {});
   return (
-    <div class="flex flex-col min-h-full" style="gap:0;padding:16px 20px 120px 20px">
+    <div class="dc-layers-panel flex flex-col min-h-full" style="gap:0;padding:16px 20px 120px 20px">
       <For each={layers()}>
         {(layer) => (
           <LayerCard layer={layer} onAddModule={props.onAddModule} showBorder={false} onReorder={() => {}} />

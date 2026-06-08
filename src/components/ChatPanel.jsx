@@ -207,11 +207,12 @@ const JOURNEY = [
 ];
 
 export default function ChatPanel() {
-  // Pre-seeded: the conversation already opened with step 0.
-  const [history, setHistory] = createSignal([
+  const initialHistory = () => [
     { kind: 'user',      text: JOURNEY[0].prompt },
     { kind: 'assistant', text: JOURNEY[0].done   },
-  ]);
+  ];
+  // Pre-seeded: the conversation already opened with step 0.
+  const [history, setHistory] = createSignal(initialHistory());
   const [stepIdx, setStepIdx] = createSignal(1);
   const [busy, setBusy] = createSignal(false);
   let scrollEl;
@@ -273,6 +274,25 @@ export default function ChatPanel() {
     }
   };
 
+  const restartJourney = async () => {
+    if (busy()) return;
+    setBusy(true);
+    clearTyped();
+    try {
+      await ensureAudio();
+      const lid = firstLayerId();
+      if (lid) await Promise.all([wipeNonMixer(lid), wait(700)]);
+      setHistory(initialHistory());
+      setStepIdx(1);
+      pushLog('sys', 'journey reset');
+    } catch (e) {
+      setHistory((h) => [...h, { kind: 'assistant', text: `error: ${e.message}` }]);
+    } finally {
+      setBusy(false);
+      scrollToBottom();
+    }
+  };
+
   return (
     <aside class="flex flex-col h-full border-r border-border bg-bg-primary w-full">
       <div
@@ -305,8 +325,17 @@ export default function ChatPanel() {
         <Show
           when={!journeyDone()}
           fallback={
-            <div class="text-sm leading-relaxed text-text-muted italic">
-              <span class="select-none mr-2">·</span>journey complete. tweak knobs and ports on the right.
+            <div class="flex flex-col gap-3">
+              <div class="text-sm leading-relaxed text-text-muted italic">
+                <span class="select-none mr-2">·</span>journey complete. tweak knobs and ports on the right.
+              </div>
+              <button
+                disabled={busy()}
+                onClick={restartJourney}
+                class="w-full text-left border border-border bg-bg-secondary px-3 py-2 text-sm leading-relaxed text-text-primary disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer hover:bg-bg-tertiary transition-colors"
+              >
+                let's start a new session
+              </button>
             </div>
           }
         >
